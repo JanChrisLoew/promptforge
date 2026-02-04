@@ -1,7 +1,7 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { Prompt } from '../types';
-import { Plus, Search, Trash2, Download, Upload, Folder, FolderOpen, ChevronRight, ChevronDown, SortAsc, Clock, MoreVertical } from 'lucide-react';
-import { formatDate } from '../utils';
+import { Plus, Search, Trash2, Download, Upload, SortAsc, Clock, MoreVertical } from 'lucide-react';
+import { PromptCategory } from './PromptCategory';
 
 interface PromptListProps {
   prompts: Prompt[];
@@ -30,6 +30,9 @@ export const PromptList: React.FC<PromptListProps> = ({
   const [sortMode, setSortMode] = useState<SortMode>('recent');
   const [showMenu, setShowMenu] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Close menu when clicking outside
@@ -40,13 +43,8 @@ export const PromptList: React.FC<PromptListProps> = ({
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
-  const [searchTerm, setSearchTerm] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
 
   // Handle Search Debouncing
   useEffect(() => {
@@ -61,52 +59,51 @@ export const PromptList: React.FC<PromptListProps> = ({
     p.tags.some(t => t.toLowerCase().includes(debouncedSearch.toLowerCase()))
   ), [prompts, debouncedSearch]);
 
-  // Group by category and Sort
   const groupedPrompts = useMemo(() => {
     const groups: Record<string, Prompt[]> = {};
-
-    // 1. Group
     filteredPrompts.forEach(p => {
       const cat = p.category || 'General';
       if (!groups[cat]) groups[cat] = [];
       groups[cat].push(p);
     });
 
-    // 2. Sort within groups
     Object.keys(groups).forEach(cat => {
       groups[cat].sort((a, b) => {
-        if (sortMode === 'alpha') {
-          return a.title.localeCompare(b.title);
-        } else {
-          // Recent: compare dates descending
-          return new Date(b.lastUpdated).getTime() - new Date(a.lastUpdated).getTime();
-        }
+        if (sortMode === 'alpha') return a.title.localeCompare(b.title);
+        return new Date(b.lastUpdated).getTime() - new Date(a.lastUpdated).getTime();
       });
     });
 
     return groups;
   }, [filteredPrompts, sortMode]);
 
-  const toggleCategory = (category: string) => {
-    const newSet = new Set(expandedCategories);
-    if (newSet.has(category)) {
-      newSet.delete(category);
-    } else {
-      newSet.add(category);
-    }
-    setExpandedCategories(newSet);
-  };
+  const toggleCategory = useCallback((category: string) => {
+    setExpandedCategories(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(category)) newSet.delete(category);
+      else newSet.add(category);
+      return newSet;
+    });
+  }, []);
 
-  const handleDelete = (e: React.MouseEvent, id: string) => {
+  const handleDelete = useCallback((e: React.MouseEvent, id: string) => {
     e.preventDefault();
     e.stopPropagation();
     onDelete(id);
-  };
+  }, [onDelete]);
+
+  const handleToggleBulkSelect = useCallback((id: string) => {
+    setSelectedIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) newSet.delete(id);
+      else newSet.add(id);
+      return newSet;
+    });
+  }, []);
 
   return (
     <div className="flex flex-col h-full bg-canvas-card border-r border-slate-200 w-full md:w-80 flex-shrink-0 text-txt-primary z-20 relative">
       <div className="p-4 border-b border-slate-200 space-y-4">
-        {/* Header Title & Library Menu */}
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-bold text-txt-primary flex items-center gap-2">
             <span className="w-8 h-8 bg-accent-1 rounded-lg flex items-center justify-center text-white text-lg shadow-md">P</span>
@@ -122,7 +119,6 @@ export const PromptList: React.FC<PromptListProps> = ({
               <MoreVertical size={20} />
             </button>
 
-            {/* Library Options Dropdown */}
             {showMenu && (
               <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
                 <div className="py-1">
@@ -144,15 +140,12 @@ export const PromptList: React.FC<PromptListProps> = ({
           </div>
         </div>
 
-        {/* Primary Action */}
         <div className="flex gap-2">
           {selectedIds.size > 0 ? (
             <button
               onClick={() => {
-                if (window.confirm(`Delete ${selectedIds.size} selected prompts?`)) {
-                  onBulkDelete(Array.from(selectedIds));
-                  setSelectedIds(new Set());
-                }
+                onBulkDelete(Array.from(selectedIds));
+                setSelectedIds(new Set());
               }}
               className="flex-1 flex items-center justify-center gap-2 bg-accent-1 hover:bg-[#b0301c] text-white py-2.5 px-3 rounded-lg text-sm font-bold shadow-md transition-all active:scale-95 animate-in zoom-in-95"
             >
@@ -168,7 +161,6 @@ export const PromptList: React.FC<PromptListProps> = ({
           )}
         </div>
 
-        {/* Search & Filter */}
         <div className="flex items-center gap-2">
           <div className="relative group flex-1">
             <Search className="absolute left-3 top-2.5 text-txt-muted group-focus-within:text-accent-3 transition-colors" size={16} />
@@ -190,90 +182,30 @@ export const PromptList: React.FC<PromptListProps> = ({
         </div>
       </div>
 
-      {/* Prompt List */}
       <div className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
         {Object.keys(groupedPrompts).length === 0 ? (
           <div className="text-center py-10 text-txt-muted text-sm">
             {searchTerm ? 'No matches found' : 'Create your first prompt'}
           </div>
         ) : (
-          Object.entries(groupedPrompts).sort().map(([category, items]) => {
-            const categoryItems = items as Prompt[];
-            return (
-              <div key={category} className="mb-2">
-                <button
-                  onClick={() => toggleCategory(category)}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold text-txt-secondary uppercase hover:bg-canvas-hover rounded-md transition-colors"
-                >
-                  {expandedCategories.has(category) ? <ChevronDown size={14} className="text-accent-2" /> : <ChevronRight size={14} className="text-txt-muted" />}
-                  {expandedCategories.has(category) ? <FolderOpen size={14} className="text-accent-2" /> : <Folder size={14} className="text-txt-muted" />}
-                  {category} <span className="ml-auto bg-slate-100 text-txt-muted px-2 py-0.5 rounded-full text-[10px]">{categoryItems.length}</span>
-                </button>
-
-                {expandedCategories.has(category) && (
-                  <div className="pl-2 mt-1 space-y-1">
-                    {categoryItems.map(prompt => (
-                      <div
-                        key={prompt.id}
-                        className={`group flex items-center p-3 rounded-lg cursor-pointer transition-all border relative ${selectedId === prompt.id
-                          ? 'bg-accent-3/10 border-accent-3 shadow-sm'
-                          : 'bg-transparent border-transparent hover:bg-canvas-hover hover:border-slate-200'
-                          }`}
-                      >
-                        <div className="mr-3 flex-shrink-0">
-                          <input
-                            type="checkbox"
-                            checked={selectedIds.has(prompt.id)}
-                            aria-label={`Select ${prompt.title || 'Untitled Prompt'}`}
-                            onChange={(e) => {
-                              e.stopPropagation();
-                              const newSet = new Set(selectedIds);
-                              if (newSet.has(prompt.id)) newSet.delete(prompt.id);
-                              else newSet.add(prompt.id);
-                              setSelectedIds(newSet);
-                            }}
-                            className="w-4 h-4 rounded border-slate-300 text-accent-3 focus:ring-accent-3 accent-accent-3 cursor-pointer"
-                          />
-                        </div>
-                        <div className="flex-1 min-w-0 pr-2" onClick={() => onSelect(prompt.id)}>
-                          <h3 className={`font-bold text-sm truncate ${selectedId === prompt.id ? 'text-accent-3' : 'text-txt-primary'}`}>
-                            {prompt.title || 'Untitled Prompt'}
-                          </h3>
-                          <div className="flex flex-wrap gap-1.5 mt-1.5">
-                            {prompt.tags.slice(0, 2).map(tag => (
-                              <span key={tag} className="text-[10px] px-2 py-0.5 bg-slate-100 text-txt-secondary border border-slate-200 rounded-md font-medium">
-                                {tag}
-                              </span>
-                            ))}
-                            <span className="text-[10px] text-txt-muted ml-1 font-mono">
-                              {sortMode === 'recent'
-                                ? formatDate(prompt.lastUpdated, 'short')
-                                : `v${(prompt.versions?.length || 0) + 1}`
-                              }
-                            </span>
-                          </div>
-                        </div>
-                        <button
-                          onClick={(e) => handleDelete(e, prompt.id)}
-                          className={`
-                            flex-shrink-0 p-2 rounded-md transition-all z-10 relative
-                            ${selectedId === prompt.id
-                              ? 'opacity-100 text-txt-muted hover:text-accent-1 hover:bg-red-50'
-                              : 'opacity-0 group-hover:opacity-100 text-txt-muted hover:text-accent-1 hover:bg-red-50'}
-                          `}
-                          title="Delete"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })
+          Object.entries(groupedPrompts).sort().map(([category, items]) => (
+            <PromptCategory
+              key={category}
+              category={category}
+              items={items}
+              isExpanded={expandedCategories.has(category)}
+              selectedId={selectedId}
+              selectedIds={selectedIds}
+              sortMode={sortMode}
+              onToggle={toggleCategory}
+              onSelect={onSelect}
+              onDelete={handleDelete}
+              onToggleBulkSelect={handleToggleBulkSelect}
+            />
+          ))
         )}
       </div>
     </div>
   );
 };
+

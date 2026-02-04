@@ -1,68 +1,40 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Prompt } from '../types';
-import { generateId, downloadJson, isValidPrompt } from '../utils';
-
-const STORAGE_KEY = 'promptforge_library';
-
-const DEFAULT_PROMPT: Prompt = {
-  id: '',
-  title: '',
-  description: '',
-  systemInstruction: '',
-  userPrompt: '',
-  category: 'General',
-  tags: [],
-  versions: [],
-  lastUpdated: '',
-};
+import { generateId, downloadJson } from '../utils';
+import { loadLibrary, saveLibrary, processImport, DEFAULT_PROMPT } from '../utils/storage';
 
 export const usePromptLibrary = () => {
   const [prompts, setPrompts] = useState<Prompt[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [isLoaded, setIsLoaded] = useState(false);
 
-  // 1. Load & Migrate Data on Mount
+  // 1. Initial Load
   useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        // Deep Migration: Ensure structure conforms to current type
-        const migrated = parsed.map((p: any) => {
-          const safeVersions = (Array.isArray(p.versions) ? p.versions : []).map((v: any) => ({
-            id: v.id || generateId(),
-            timestamp: v.timestamp || new Date().toISOString(),
-            systemInstruction: v.systemInstruction || '',
-            userPrompt: v.userPrompt || '',
-            note: v.note || ''
-          }));
-
-          const sanitized = {
-            ...DEFAULT_PROMPT,
-            ...p,
-            versions: safeVersions
-          };
-
-          // Cleanup legacy fields
-          delete sanitized.parameters;
-          delete sanitized.model;
-
-          return sanitized;
-        });
-
-        setPrompts(migrated);
-        if (migrated.length > 0) setSelectedId(migrated[0].id);
-      } catch (e) {
-        console.error("Failed to load prompts", e);
-      }
+    const loadedPrompts = loadLibrary();
+    if (loadedPrompts.length > 0) {
+      setPrompts(loadedPrompts);
+      setSelectedId(loadedPrompts[0].id);
     } else {
-      createPrompt(); // Init with one empty prompt
+      // Create first prompt if empty (but only after first check)
+      const newId = generateId();
+      const firstPrompt: Prompt = {
+        ...DEFAULT_PROMPT,
+        id: newId,
+        title: 'New Prompt',
+        lastUpdated: new Date().toISOString(),
+      };
+      setPrompts([firstPrompt]);
+      setSelectedId(newId);
     }
+    setIsLoaded(true);
   }, []);
 
-  // 2. Persist Data on Change
+  // 2. Persist Data (Effect controlled by state change)
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(prompts));
-  }, [prompts]);
+    if (isLoaded) {
+      saveLibrary(prompts);
+    }
+  }, [prompts, isLoaded]);
 
   // Actions
   const createPrompt = useCallback(() => {
@@ -101,22 +73,22 @@ export const usePromptLibrary = () => {
   }, [selectedId]);
 
   const bulkDeletePrompts = useCallback((ids: string[]) => {
-    setPrompts(prev => prev.filter(p => !ids.includes(p.id)));
-    if (selectedId && ids.includes(selectedId)) {
-      setSelectedId(null);
+    if (window.confirm(`Are you sure you want to delete ${ids.length} prompts?`)) {
+      setPrompts(prev => prev.filter(p => !ids.includes(p.id)));
+      if (selectedId && ids.includes(selectedId)) {
+        setSelectedId(null);
+      }
     }
   }, [selectedId]);
 
-  // Fix Selection after delete
+  // Selection safety
   useEffect(() => {
-    if (prompts.length > 0 && selectedId === null) {
-      // If nothing is selected (e.g. after delete), select the first one
-      setSelectedId(prompts[0].id);
-    } else if (prompts.length > 0 && !prompts.find(p => p.id === selectedId)) {
-      // If selected ID no longer exists
-      setSelectedId(prompts[0].id);
+    if (isLoaded && prompts.length > 0) {
+      if (selectedId === null || !prompts.find(p => p.id === selectedId)) {
+        setSelectedId(prompts[0].id);
+      }
     }
-  }, [prompts, selectedId]);
+  }, [prompts, selectedId, isLoaded]);
 
   const checkTitleUnique = useCallback((title: string, excludeId: string) => {
     const normalize = (t: string) => t.trim().toLowerCase();
@@ -125,8 +97,7 @@ export const usePromptLibrary = () => {
   }, [prompts]);
 
   const exportLibrary = useCallback(() => {
-    const now = new Date();
-    const timestamp = now.toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
     downloadJson(`prompt_library_full_${timestamp}.json`, prompts);
   }, [prompts]);
 
@@ -138,65 +109,14 @@ export const usePromptLibrary = () => {
     reader.onload = (event) => {
       try {
         const json = JSON.parse(event.target?.result as string);
-        const importList = Array.isArray(json) ? json : [json];
-        if (importList.length === 0) return;
+        const { merged, stats } = processImport(json, prompts);
 
-        let newCount = 0;
-        let updateCount = 0;
-        let errorCount = 0;
-
-        setPrompts(prev => {
-          const currentMap = new Map<string, Prompt>();
-          prev.forEach(p => currentMap.set(p.id, p));
-
-          importList.forEach((p: any) => {
-            if (!isValidPrompt(p)) {
-              // If simple structure check fails, try to salvage key fields or skip
-              // For strict safety, we might skip, but let's try to apply defaults if ID exists
-              if (!p.id) {
-                errorCount++;
-                return;
-              }
-            }
-
-            if (!p.id) p.id = generateId();
-            const safeVersions = (Array.isArray(p.versions) ? p.versions : []).map((v: any) => ({
-              id: v.id || generateId(),
-              timestamp: v.timestamp || new Date().toISOString(),
-              systemInstruction: v.systemInstruction || '',
-              userPrompt: v.userPrompt || '',
-              note: v.note || ''
-            }));
-
-            const sanitizedPrompt = { ...DEFAULT_PROMPT, ...p, versions: safeVersions };
-            // Cleanup legacy
-            delete sanitizedPrompt.parameters;
-            delete sanitizedPrompt.model;
-
-            if (currentMap.has(p.id)) {
-              updateCount++;
-              currentMap.set(p.id, sanitizedPrompt);
-            } else {
-              let uniqueTitle = sanitizedPrompt.title;
-              let counter = 1;
-              const isTitleTaken = (t: string) => Array.from(currentMap.values()).some(existing => existing.title.toLowerCase() === t.toLowerCase());
-              while (isTitleTaken(uniqueTitle)) {
-                uniqueTitle = `${sanitizedPrompt.title} (${counter})`;
-                counter++;
-              }
-              sanitizedPrompt.title = uniqueTitle;
-              newCount++;
-              currentMap.set(p.id, sanitizedPrompt);
-            }
-          });
-
-          if (errorCount > 0) {
-            console.warn(`Skipped ${errorCount} invalid prompts during import.`);
-          }
-
-          return Array.from(currentMap.values());
-        });
-        alert(`Import Complete:\n• ${newCount} New Prompts Added\n• ${updateCount} Updated\n• ${errorCount} Skipped (Invalid Format)`);
+        if (merged.length > prompts.length || stats.updated > 0) {
+          setPrompts(merged);
+          alert(`Import Complete:\n• ${stats.new} New Prompts Added\n• ${stats.updated} Updated\n• ${stats.errors} Skipped`);
+        } else if (stats.errors > 0) {
+          alert(`Import Failed: ${stats.errors} invalid prompts skipped.`);
+        }
       } catch (err) {
         console.error(err);
         alert("Invalid JSON file");
@@ -204,7 +124,7 @@ export const usePromptLibrary = () => {
     };
     reader.readAsText(file);
     e.target.value = '';
-  }, []);
+  }, [prompts]);
 
   return {
     prompts,
