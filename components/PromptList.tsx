@@ -224,6 +224,7 @@ export const PromptList: React.FC<PromptListProps> = ({
                           <input
                             type="checkbox"
                             checked={selectedIds.has(prompt.id)}
+                            aria-label={`Select ${prompt.title || 'Untitled Prompt'}`}
                             onChange={(e) => {
                               e.stopPropagation();
                               const newSet = new Set(selectedIds);
