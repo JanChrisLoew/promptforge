@@ -1,5 +1,5 @@
 import { Prompt } from '../types';
-import { generateId } from './index';
+import { generateId, isValidPrompt } from './index';
 
 const STORAGE_KEY = 'promptforge_library';
 
@@ -23,7 +23,7 @@ export const loadLibrary = (): Prompt[] => {
         const parsed = JSON.parse(saved);
         const importList = Array.isArray(parsed) ? parsed : [parsed];
 
-        return importList.map((p: any) => migratePrompt(p));
+        return importList.map((p: unknown) => migratePrompt(p));
     } catch (e) {
         console.error("Failed to load prompts", e);
         return [];
@@ -42,43 +42,50 @@ export const saveLibrary = (prompts: Prompt[]) => {
     }
 };
 
-export const migratePrompt = (p: any): Prompt => {
+export const migratePrompt = (p: unknown): Prompt => {
     if (!p || typeof p !== 'object') return { ...DEFAULT_PROMPT, id: generateId() };
 
-    const safeVersions = (Array.isArray(p.versions) ? p.versions : []).map((v: any) => ({
-        id: v?.id || generateId(),
-        timestamp: v?.timestamp || new Date().toISOString(),
-        systemInstruction: v?.systemInstruction || '',
-        userPrompt: v?.userPrompt || '',
-        note: v?.note || ''
-    }));
+    const data = p as Record<string, unknown>;
+    const versions = Array.isArray(data.versions) ? data.versions : [];
 
-    const sanitized = {
+    const safeVersions = versions.map((v: unknown) => {
+        const vData = v as Record<string, unknown>;
+        return {
+            id: (vData.id as string) || generateId(),
+            timestamp: (vData.timestamp as string) || new Date().toISOString(),
+            systemInstruction: (vData.systemInstruction as string) || '',
+            userPrompt: (vData.userPrompt as string) || '',
+            note: (vData.note as string) || ''
+        };
+    });
+
+    const sanitized: Prompt = {
         ...DEFAULT_PROMPT,
-        ...p,
-        id: p.id || generateId(),
-        title: p.title || 'Untitled Prompt',
+        ...data,
+        id: (data.id as string) || generateId(),
+        title: (data.title as string) || 'Untitled Prompt',
         versions: safeVersions
-    };
+    } as Prompt;
 
     // Cleanup legacy fields
-    delete (sanitized as any).parameters;
-    delete (sanitized as any).model;
+    const draft = sanitized as unknown as Record<string, unknown>;
+    delete draft.parameters;
+    delete draft.model;
 
     return sanitized;
 };
 
-export const processImport = (json: any, currentPrompts: Prompt[]): {
+export const processImport = (json: unknown, currentPrompts: Prompt[]): {
     merged: Prompt[],
-    stats: { new: number, updated: number, errors: number }
+    stats: { new: number, updated: number, skipped: number, errors: number }
 } => {
     const importList = Array.isArray(json) ? json : [json];
-    const stats = { new: 0, updated: 0, errors: 0 };
+    const stats = { new: 0, updated: 0, skipped: 0, errors: 0 };
 
     const currentMap = new Map<string, Prompt>();
     currentPrompts.forEach(p => currentMap.set(p.id, p));
 
-    importList.forEach((p: any) => {
+    importList.forEach((p: unknown) => {
         if (!p || typeof p !== 'object') {
             stats.errors++;
             return;
@@ -86,9 +93,24 @@ export const processImport = (json: any, currentPrompts: Prompt[]): {
 
         const sanitizedPrompt = migratePrompt(p);
 
+        // Final integrity check after migration
+        if (!isValidPrompt(sanitizedPrompt)) {
+            stats.errors++;
+            return;
+        }
+
         if (currentMap.has(sanitizedPrompt.id)) {
-            stats.updated++;
-            currentMap.set(sanitizedPrompt.id, sanitizedPrompt);
+            // Check if it's actually different (simple equality check on lastUpdated or content)
+            const existing = currentMap.get(sanitizedPrompt.id);
+            if (existing &&
+                (existing.systemInstruction !== sanitizedPrompt.systemInstruction ||
+                    existing.userPrompt !== sanitizedPrompt.userPrompt ||
+                    existing.title !== sanitizedPrompt.title)) {
+                stats.updated++;
+                currentMap.set(sanitizedPrompt.id, sanitizedPrompt);
+            } else {
+                stats.skipped++;
+            }
         } else {
             let uniqueTitle = sanitizedPrompt.title;
             let counter = 1;

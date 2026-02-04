@@ -48,7 +48,7 @@ export const PromptList: React.FC<PromptListProps> = ({
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [menuRef]);
 
   // Handle Search Debouncing
   useEffect(() => {

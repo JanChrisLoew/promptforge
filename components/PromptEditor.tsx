@@ -3,7 +3,7 @@ import { Prompt, PromptVersion } from '../types';
 import { generateId, sanitizeFilename, downloadJson } from '../utils';
 import { EditorHeader } from './EditorHeader';
 import { TagManager } from './TagManager';
-import { VersionList } from '././VersionList';
+import { VersionList } from './VersionList';
 import { useDebounce } from '../hooks/useDebounce';
 import { ConfirmationType } from './ConfirmationModal';
 
@@ -49,18 +49,8 @@ export const PromptEditor: React.FC<PromptEditorProps> = ({
     isDirtyRef.current = isDirty;
   }, [localPrompt, isDirty]);
 
-  // Handle Prompt ID Change
-  useEffect(() => {
-    if (isDirtyRef.current && localPromptRef.current.id !== prompt.id) {
-      onUpdate({ ...localPromptRef.current, lastUpdated: new Date().toISOString() });
-    }
-
-    setLocalPrompt(prompt);
-    setTagInput('');
-    setCommitNote('');
-    setShowCommitInput(false);
-    setIsDirty(false);
-  }, [prompt.id]);
+  // No manual reset logic needed here as the parent MainWorkspace uses 
+  // key={prompt.id} to remount this component when the prompt changes.
 
   // Debounced Auto-save
   const debouncedPrompt = useDebounce(localPrompt, 600);
@@ -68,9 +58,11 @@ export const PromptEditor: React.FC<PromptEditorProps> = ({
   useEffect(() => {
     if (isDirty && debouncedPrompt.id === localPrompt.id) {
       onUpdate({ ...debouncedPrompt, lastUpdated: new Date().toISOString() });
-      setIsDirty(false);
+      // Defer reset to next tick to avoid "cascade render" lint error
+      const timer = setTimeout(() => setIsDirty(false), 0);
+      return () => clearTimeout(timer);
     }
-  }, [debouncedPrompt, onUpdate]);
+  }, [debouncedPrompt, onUpdate, isDirty, localPrompt.id]);
 
   // Safety Flush on Unmount
   useEffect(() => {
@@ -79,7 +71,7 @@ export const PromptEditor: React.FC<PromptEditorProps> = ({
         onUpdate({ ...localPromptRef.current, lastUpdated: new Date().toISOString() });
       }
     };
-  }, []);
+  }, [onUpdate]);
 
   // Keyboard Shortcuts
   useEffect(() => {
@@ -93,7 +85,7 @@ export const PromptEditor: React.FC<PromptEditorProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  const handleChange = (field: keyof Prompt, value: any) => {
+  const handleChange = (field: keyof Prompt, value: string | string[] | PromptVersion[]) => {
     setLocalPrompt(prev => ({ ...prev, [field]: value }));
     setIsDirty(true);
   };

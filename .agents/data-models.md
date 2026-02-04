@@ -3,6 +3,7 @@
 The application relies on the following core data structures defined in `types.ts`.
 
 ## 1. Prompt (Root Entity)
+
 Represents a single entry in the library.
 
 ```typescript
@@ -20,6 +21,7 @@ interface Prompt {
 ```
 
 ## 2. PromptVersion (Child Entity)
+
 Represents a snapshot of a prompt at a specific point in time.
 
 ```typescript
@@ -33,6 +35,7 @@ interface PromptVersion {
 ```
 
 ## 3. Library
+
 The collection of all prompts.
 
 ```typescript

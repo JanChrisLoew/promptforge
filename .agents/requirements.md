@@ -1,9 +1,11 @@
 # Requirements & Traceability Matrix (RTM)
 
 ## Project Overview
+
 **PromptForge** is a local-first, professional prompt engineering tool designed for performance, privacy, and ease of use. This document tracks the functional and non-functional requirements against the current codebase implementation.
 
 ## Legend
+
 - ✅ **Complete:** Fully implemented and integrated.
 - 🚧 **In Progress:** Partially implemented or needs refinement.
 - ❌ **Pending:** Planned but not yet started.
@@ -15,13 +17,13 @@
 | **CORE-001** | **CRUD** | Create new empty prompts with unique IDs. | ✅ | `usePromptLibrary.ts` -> `createPrompt` |
 | **CORE-002** | **CRUD** | Read/List prompts with infinite scroll/virtualization support (UI). | ✅ | `PromptList.tsx` (overflow-y-auto) |
 | **CORE-003** | **CRUD** | Update prompt content (System, User, Title, Category). | ✅ | `PromptEditor.tsx` -> `handleChange` |
-| **CORE-004** | **CRUD** | Delete prompts with confirmation dialog. | ✅ | `usePromptLibrary.ts` -> `deletePrompt` |
+| **CORE-004** | **CRUD** | Delete prompts with custom confirmation modal. | ✅ | `App.tsx` -> `ConfirmationModal` |
 | **ORG-001** | **Organization** | Filter prompts by search term (Title/Tags). | ✅ | `PromptList.tsx` -> `filteredPrompts` |
 | **ORG-002** | **Organization** | Group prompts by Category with collapsible folders. | ✅ | `PromptList.tsx` -> `groupedPrompts` |
 | **ORG-003** | **Organization** | Sort prompts by "Last Updated" and "Alphabetical". | ✅ | `PromptList.tsx` -> `sortMode` |
 | **ORG-004** | **Organization** | Add/Remove Tags for prompts. | ✅ | `PromptEditor.tsx` -> `Tags section` |
 | **VER-001** | **Versioning** | Create snapshots (versions) of a prompt. | ✅ | `PromptEditor.tsx` -> `saveVersion` |
-| **VER-002** | **Versioning** | Restore previous versions from history. | ✅ | `PromptEditor.tsx` -> `restoreVersion` |
+| **VER-002** | **Versioning** | Restore previous versions with custom warning modal. | ✅ | `PromptEditor.tsx` -> `ConfirmationModal` |
 | **VER-003** | **Versioning** | Add optional commit notes to versions. | ✅ | `PromptEditor.tsx` -> `commitNote` |
 | **DATA-001** | **Persistence** | Auto-save all data to LocalStorage. | ✅ | `usePromptLibrary.ts` -> `useEffect` |
 | **DATA-002** | **Import/Export** | Export full library to JSON (Blob-based for large files). | ✅ | `utils/index.ts` -> `downloadJson` |
@@ -35,12 +37,16 @@
 | **PERF-002** | **Stability** | Layout Shift prevention (Scrollbar Gutter). | ✅ | `index.css` -> `scrollbar-gutter: stable` |
 | **SEC-001** | **Safety** | Prevent data loss on component unmount or rapid switching (Flush). | ✅ | `PromptEditor.tsx` -> `Safety Flush` effects |
 | **SEC-002** | **Validation** | Type Guard checks for imported JSON data. | ✅ | `utils/index.ts` -> `isValidPrompt` |
+| **AUTH-001** | **Access** | Simulated Auth (Landing Page gating) with LocalStorage persistence. | ✅ | `App.tsx` -> `isAuthenticated` |
+| **UX-005** | **Layout** | Global Persistent Footer for professional/legal access. | ✅ | `SiteFooter.tsx` |
+| **UX-006** | **Interaction** | Custom Themed In-App Modals (replacing native dialogs). | ✅ | `ConfirmationModal.tsx` |
 
 ## Future Roadmap & Concept Requirements
 
 The following requirements define the evolution from a "Library" to a full "Prompt Engineering IDE".
 
 ### Phase 2: AI Execution (The Playground)
+
 | ID | Category | Requirement Description | Value Proposition |
 | :--- | :--- | :--- | :--- |
 | **AI-001** | **Execution** | Integration of **Google Gemini API** (BYOK - Bring Your Own Key). | Allows immediate testing of prompts without leaving the app. |
@@ -50,6 +56,7 @@ The following requirements define the evolution from a "Library" to a full "Prom
 | **AI-005** | **Multimodal** | **Native PDF & Image Support:** Support uploading PDFs (`application/pdf`) and Images as Inline-Data. | Enables **Document Understanding** (RAG-lite) tasks directly in the browser without external OCR. |
 
 ### Phase 3: Advanced Engineering
+
 | ID | Category | Requirement Description | Value Proposition |
 | :--- | :--- | :--- | :--- |
 | **ENG-001** | **Variables** | Auto-detect `{{variables}}` in text and provide form fields to fill them before execution. | Makes testing dynamic prompts much faster and realistic. |
@@ -58,6 +65,7 @@ The following requirements define the evolution from a "Library" to a full "Prom
 | **ENG-004** | **Linting** | Static analysis of prompts (e.g., "Prompt too long", "Conflicting instructions"). | Automated quality assurance. |
 
 ### Phase 4: Workflow & Integration
+
 | ID | Category | Requirement Description | Value Proposition |
 | :--- | :--- | :--- | :--- |
 | **FLOW-001** | **Export** | "Copy as Code" button (Python/JS/cURL snippets with variables pre-filled). | Reduces friction when moving from prompt engineering to production code. |
@@ -68,17 +76,20 @@ The following requirements define the evolution from a "Library" to a full "Prom
 ## Technical Constraints & Health Check
 
 ### 1. Data Integrity
+
 - **Status:** Healthy
 - **Details:** The application now uses a robust "Safety Flush" mechanism in `PromptEditor` to handle race conditions between the debounced save timer and component unmounting/switching. Imports are validated via `isValidPrompt`.
 
 ### 2. Performance
+
 - **Status:** Healthy
 - **Details:**
-    - **Debouncing:** Input lag is minimized by delaying the write operation to LocalStorage.
-    - **Rendering:** React `useMemo` is used extensively for derived state (filtering, sorting, stats) to prevent unnecessary re-renders.
+  - **Debouncing:** Input lag is minimized by delaying the write operation to LocalStorage.
+  - **Rendering:** React `useMemo` is used extensively for derived state (filtering, sorting, stats) to prevent unnecessary re-renders.
 
 ### 3. Scalability (Local)
+
 - **Status:** Good
 - **Details:**
-    - **Storage:** Limited by browser `LocalStorage` quota (typically 5-10MB strings).
-    - **Export:** The switch to `Blob` and `URL.createObjectURL` allows exporting libraries significantly larger than the previous `data:uri` limit.
+  - **Storage:** Limited by browser `LocalStorage` quota (typically 5-10MB strings).
+  - **Export:** The switch to `Blob` and `URL.createObjectURL` allows exporting libraries significantly larger than the previous `data:uri` limit.

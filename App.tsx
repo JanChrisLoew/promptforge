@@ -1,7 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { PromptList } from './components/PromptList';
-import { PromptEditor } from './components/PromptEditor';
-import { Dashboard } from './components/Dashboard';
+import React, { useState, useMemo } from 'react';
+import { MainWorkspace } from './components/MainWorkspace';
 import { LandingPage } from './components/LandingPage';
 import { SiteFooter } from './components/SiteFooter';
 import { InfoOverlay, InfoType } from './components/InfoOverlay';
@@ -19,8 +17,7 @@ const App: React.FC = () => {
     checkTitleUnique,
     exportLibrary,
     importLibrary,
-    bulkDeletePrompts,
-    isLoaded
+    bulkDeletePrompts
   } = usePromptLibrary();
 
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
@@ -54,10 +51,7 @@ const App: React.FC = () => {
     setConfirmConfig(prev => ({ ...prev, isOpen: false }));
   };
 
-  // Sync dashboard state with selection
-  useEffect(() => {
-    if (selectedId) setShowDashboard(false);
-  }, [selectedId]);
+
 
   const handleEnter = () => {
     setIsAuthenticated(true);
@@ -82,43 +76,38 @@ const App: React.FC = () => {
     return Array.from(cats).sort();
   }, [prompts]);
 
-  const selectedPrompt = prompts.find(p => p.id === selectedId);
-
-  // Dashboard Stats
   const stats = useMemo(() => {
     const totalPrompts = prompts.length;
-    const totalVersions = prompts.reduce((acc, p) => acc + (p.versions?.length || 0), 0);
+    const totalVersions = prompts.reduce((acc: number, p) => acc + (p.versions?.length || 0), 0);
     const allTags = new Set(prompts.flatMap(p => p.tags));
     return { totalPrompts, totalVersions, uniqueTags: allTags.size };
   }, [prompts]);
 
-  // Prevent data loss on accidental close
-  useEffect(() => {
-    const handleBeforeUnload = () => {
-      // If there's an active editor, the PromptEditor component handles its own dirty state via LocalStorage sync.
-      // But we can add a generic safety check here if needed.
-      // For now, ensuring the window knows we are active is standard.
-    };
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, []);
-
-  if (!isLoaded) {
-    return (
-      <div className="flex h-screen bg-canvas-base animate-pulse">
-        <div className="w-80 border-r border-color-border bg-canvas-card" />
-        <div className="flex-1 p-8 space-y-8">
-          <div className="h-10 w-48 bg-slate-200 dark:bg-slate-700 rounded-lg" />
-          <div className="grid grid-cols-3 gap-6">
-            <div className="h-32 bg-slate-200 dark:bg-slate-700 rounded-xl" />
-            <div className="h-32 bg-slate-200 dark:bg-slate-700 rounded-xl" />
-            <div className="h-32 bg-slate-200 dark:bg-slate-700 rounded-xl" />
-          </div>
-          <div className="h-64 bg-slate-200 dark:bg-slate-700 rounded-xl" />
-        </div>
-      </div>
+  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    importLibrary(
+      e,
+      (stats) => {
+        showConfirm({
+          type: 'info',
+          title: 'Import Complete',
+          message: `Successfully processed your library:\n• ${stats.new} New Prompts\n• ${stats.updated} Updated\n• ${stats.skipped} Already up-to-date\n${stats.errors > 0 ? `• ${stats.errors} Invalid items skipped` : ''}`,
+          confirmLabel: 'Great',
+          onConfirm: closeConfirm
+        });
+      },
+      (error) => {
+        showConfirm({
+          type: 'danger',
+          title: 'Import Failed',
+          message: error,
+          confirmLabel: 'Try Again',
+          onConfirm: closeConfirm
+        });
+      }
     );
-  }
+  };
+
+
 
   if (!isAuthenticated) {
     return (
@@ -137,62 +126,36 @@ const App: React.FC = () => {
 
   return (
     <div className="flex flex-col h-screen bg-canvas-base text-txt-primary font-sans transition-colors duration-300">
-      <div className="flex flex-1 overflow-hidden">
-        <PromptList
-          prompts={prompts}
-          selectedId={selectedId}
-          onSelect={(id) => { setSelectedId(id); setShowDashboard(false); }}
-          onDelete={(id) => showConfirm({
-            type: 'danger',
-            title: 'Delete Prompt',
-            message: 'Are you sure you want to delete this prompt? This action cannot be undone.',
-            confirmLabel: 'Delete',
-            onConfirm: () => { deletePrompt(id); closeConfirm(); }
-          })}
-          onBulkDelete={(ids) => showConfirm({
-            type: 'danger',
-            title: 'Delete Selected',
-            message: `Are you sure you want to delete ${ids.length} prompts? This will permanently remove them from your library.`,
-            confirmLabel: 'Delete All',
-            onConfirm: () => { bulkDeletePrompts(ids); closeConfirm(); }
-          })}
-          onCreate={() => { createPrompt(); setShowDashboard(false); }}
-          onExport={exportLibrary}
-          onImport={importLibrary}
-          onGoHome={() => setShowDashboard(true)}
-          isHomeActive={showDashboard}
-        />
-
-        {showDashboard ? (
-          <Dashboard
-            prompts={prompts}
-            stats={stats}
-            onCreatePrompt={() => { createPrompt(); setShowDashboard(false); }}
-            onImportLibrary={importLibrary}
-            onSelectPrompt={(id) => { setSelectedId(id); setShowDashboard(false); }}
-          />
-        ) : selectedPrompt ? (
-          <div className="flex-1 flex flex-col overflow-hidden relative">
-            <PromptEditor
-              key={selectedPrompt.id}
-              prompt={selectedPrompt}
-              onUpdate={updatePrompt}
-              availableCategories={uniqueCategories}
-              isTitleUnique={(title) => checkTitleUnique(title, selectedPrompt.id)}
-              onShowConfirm={showConfirm}
-              onCloseConfirm={closeConfirm}
-            />
-          </div>
-        ) : (
-          <Dashboard
-            prompts={prompts}
-            stats={stats}
-            onCreatePrompt={() => { createPrompt(); setShowDashboard(false); }}
-            onImportLibrary={importLibrary}
-            onSelectPrompt={(id) => { setSelectedId(id); setShowDashboard(false); }}
-          />
-        )}
-      </div>
+      <MainWorkspace
+        prompts={prompts}
+        selectedId={selectedId}
+        showDashboard={showDashboard}
+        stats={stats}
+        uniqueCategories={uniqueCategories}
+        onSelect={(id) => { setSelectedId(id); setShowDashboard(false); }}
+        onDelete={(id) => showConfirm({
+          type: 'danger',
+          title: 'Delete Prompt',
+          message: 'Are you sure you want to delete this prompt? This action cannot be undone.',
+          confirmLabel: 'Delete',
+          onConfirm: () => { deletePrompt(id); closeConfirm(); }
+        })}
+        onBulkDelete={(ids) => showConfirm({
+          type: 'danger',
+          title: 'Delete Selected',
+          message: `Are you sure you want to delete ${ids.length} prompts? This will permanently remove them from your library.`,
+          confirmLabel: 'Delete All',
+          onConfirm: () => { bulkDeletePrompts(ids); closeConfirm(); }
+        })}
+        onCreate={() => { createPrompt(); setShowDashboard(false); }}
+        onExport={exportLibrary}
+        onImport={handleImport}
+        onGoHome={() => setShowDashboard(true)}
+        onUpdatePrompt={updatePrompt}
+        checkTitleUnique={checkTitleUnique}
+        onShowConfirm={showConfirm}
+        onCloseConfirm={closeConfirm}
+      />
 
       <SiteFooter onOpenInfo={setOverlayType} />
 
@@ -223,6 +186,5 @@ const App: React.FC = () => {
     </div>
   );
 };
-
 
 export default App;

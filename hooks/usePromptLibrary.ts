@@ -1,46 +1,42 @@
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Prompt } from '../types';
 import { generateId, downloadJson } from '../utils';
 import { loadLibrary, saveLibrary, processImport, DEFAULT_PROMPT } from '../utils/storage';
 
 export const usePromptLibrary = () => {
-  const [prompts, setPrompts] = useState<Prompt[]>([]);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [isLoaded, setIsLoaded] = useState(false);
-
-  // 1. Initial Load
-  useEffect(() => {
-    const loadedPrompts = loadLibrary();
-    if (loadedPrompts.length > 0) {
-      setPrompts(loadedPrompts);
-      setSelectedId(loadedPrompts[0].id);
-    } else {
-      // Create first prompt if empty (but only after first check)
-      const newId = generateId();
-      const firstPrompt: Prompt = {
+  const [prompts, setPrompts] = useState<Prompt[]>(() => {
+    const loaded = loadLibrary();
+    if (loaded.length === 0) {
+      return [{
         ...DEFAULT_PROMPT,
-        id: newId,
+        id: generateId(),
         title: 'New Prompt',
         lastUpdated: new Date().toISOString(),
-      };
-      setPrompts([firstPrompt]);
-      setSelectedId(newId);
+      }];
     }
-    setIsLoaded(true);
-  }, []);
+    return loaded;
+  });
 
-  // 2. Persist Data (Effect controlled by state change)
+  const [selectedId, setSelectedId] = useState<string | null>(() => {
+    return prompts.length > 0 ? prompts[0].id : null;
+  });
+
+  const isMounted = useRef(false);
+
+  // 1. Persistence Effect
   useEffect(() => {
-    if (isLoaded) {
+    if (isMounted.current) {
       saveLibrary(prompts);
+    } else {
+      isMounted.current = true;
     }
-  }, [prompts, isLoaded]);
+  }, [prompts]);
 
   // Actions
-  const createPrompt = useCallback(() => {
+  const createPrompt = useCallback(async () => {
     const newId = generateId();
     setPrompts(prev => {
-      let baseTitle = 'New Prompt';
+      const baseTitle = 'New Prompt';
       let title = baseTitle;
       let counter = 1;
       while (prev.some(p => p.title.toLowerCase() === title.toLowerCase())) {
@@ -59,32 +55,33 @@ export const usePromptLibrary = () => {
     setSelectedId(newId);
   }, []);
 
-  const updatePrompt = useCallback((updated: Prompt) => {
+  const updatePrompt = useCallback(async (updated: Prompt) => {
     setPrompts(prev => prev.map(p => p.id === updated.id ? updated : p));
   }, []);
 
-  const deletePrompt = useCallback((id: string) => {
-    setPrompts(prev => prev.filter(p => p.id !== id));
-    if (selectedId === id) {
-      setSelectedId(null);
-    }
-  }, [selectedId]);
-
-  const bulkDeletePrompts = useCallback((ids: string[]) => {
-    setPrompts(prev => prev.filter(p => !ids.includes(p.id)));
-    if (selectedId && ids.includes(selectedId)) {
-      setSelectedId(null);
-    }
-  }, [selectedId]);
-
-  // Selection safety
-  useEffect(() => {
-    if (isLoaded && prompts.length > 0) {
-      if (selectedId === null || !prompts.find(p => p.id === selectedId)) {
-        setSelectedId(prompts[0].id);
+  const deletePrompt = useCallback(async (id: string) => {
+    setPrompts(prev => {
+      const updated = prev.filter(p => p.id !== id);
+      // Correction logic: if selectedId was deleted, move selection
+      if (selectedId === id) {
+        setSelectedId(updated.length > 0 ? updated[0].id : null);
       }
-    }
-  }, [prompts, selectedId, isLoaded]);
+      return updated;
+    });
+  }, [selectedId]);
+
+  const bulkDeletePrompts = useCallback(async (ids: string[]) => {
+    setPrompts(prev => {
+      const updated = prev.filter(p => !ids.includes(p.id));
+      // Correction logic: if active selection was in bulk delete
+      if (selectedId && ids.includes(selectedId)) {
+        setSelectedId(updated.length > 0 ? updated[0].id : null);
+      }
+      return updated;
+    });
+  }, [selectedId]);
+
+
 
   const checkTitleUnique = useCallback((title: string, excludeId: string) => {
     const normalize = (t: string) => t.trim().toLowerCase();
@@ -97,7 +94,11 @@ export const usePromptLibrary = () => {
     downloadJson(`prompt_library_full_${timestamp}.json`, prompts);
   }, [prompts]);
 
-  const importLibrary = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  const importLibrary = useCallback((
+    e: React.ChangeEvent<HTMLInputElement>,
+    onComplete: (stats: { new: number, updated: number, skipped: number, errors: number }) => void,
+    onError: (message: string) => void
+  ) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -110,8 +111,10 @@ export const usePromptLibrary = () => {
         if (merged.length > prompts.length || stats.updated > 0) {
           setPrompts(merged);
         }
+        onComplete(stats);
       } catch (err) {
         console.error(err);
+        onError("The selected file is not a valid JSON or may be corrupted.");
       }
     };
     reader.readAsText(file);
@@ -128,7 +131,6 @@ export const usePromptLibrary = () => {
     checkTitleUnique,
     exportLibrary,
     importLibrary,
-    bulkDeletePrompts,
-    isLoaded
+    bulkDeletePrompts
   };
 };

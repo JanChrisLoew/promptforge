@@ -19,3 +19,9 @@ export interface Prompt {
 }
 
 export type PromptLibrary = Prompt[];
+
+export interface PromptStats {
+  totalPrompts: number;
+  totalVersions: number;
+  uniqueTags: number;
+}

@@ -36,7 +36,7 @@ export const formatDate = (dateString: string, style: 'short' | 'medium' = 'medi
  * @param filename Name of the file including extension
  * @param data Object to stringify
  */
-export const downloadJson = (filename: string, data: any) => {
+export const downloadJson = (filename: string, data: unknown) => {
   const jsonString = JSON.stringify(data, null, 2);
   const blob = new Blob([jsonString], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
@@ -62,13 +62,30 @@ export const sanitizeFilename = (text: string): string => {
 /**
  * Type Guard to validate if an object is a valid Prompt
  */
-export const isValidPrompt = (data: any): data is Prompt => {
-  return (
-    typeof data === 'object' &&
-    data !== null &&
-    typeof data.id === 'string' &&
-    typeof data.title === 'string' &&
-    Array.isArray(data.tags) &&
-    Array.isArray(data.versions)
-  );
+export const isValidPrompt = (data: unknown): data is Prompt => {
+  if (!data || typeof data !== 'object') return false;
+
+  const d = data as Record<string, unknown>;
+
+  const hasRequiredFields =
+    typeof d.id === 'string' &&
+    typeof d.title === 'string' &&
+    typeof d.systemInstruction === 'string' &&
+    typeof d.userPrompt === 'string' &&
+    Array.isArray(d.tags) &&
+    Array.isArray(d.versions);
+
+  if (!hasRequiredFields) return false;
+
+  // Validate versions structure
+  const hasValidVersions = (d.versions as unknown[]).every((v: unknown) => {
+    const vData = v as Record<string, unknown>;
+    return vData && typeof vData === 'object' &&
+      typeof vData.id === 'string' &&
+      typeof vData.timestamp === 'string' &&
+      typeof vData.systemInstruction === 'string' &&
+      typeof vData.userPrompt === 'string';
+  });
+
+  return hasValidVersions;
 };
