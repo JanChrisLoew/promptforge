@@ -3,17 +3,33 @@ import { Prompt, PromptVersion } from '../types';
 import { generateId, sanitizeFilename, downloadJson } from '../utils';
 import { EditorHeader } from './EditorHeader';
 import { TagManager } from './TagManager';
-import { VersionList } from './VersionList';
+import { VersionList } from '././VersionList';
 import { useDebounce } from '../hooks/useDebounce';
+import { ConfirmationType } from './ConfirmationModal';
 
 interface PromptEditorProps {
   prompt: Prompt;
   onUpdate: (updatedPrompt: Prompt) => void;
   availableCategories: string[];
   isTitleUnique: (title: string) => boolean;
+  onShowConfirm: (config: {
+    type: ConfirmationType;
+    title: string;
+    message: string;
+    confirmLabel: string;
+    onConfirm: () => void;
+  }) => void;
+  onCloseConfirm: () => void;
 }
 
-export const PromptEditor: React.FC<PromptEditorProps> = ({ prompt, onUpdate, availableCategories, isTitleUnique }) => {
+export const PromptEditor: React.FC<PromptEditorProps> = ({
+  prompt,
+  onUpdate,
+  availableCategories,
+  isTitleUnique,
+  onShowConfirm,
+  onCloseConfirm
+}) => {
   const [localPrompt, setLocalPrompt] = useState<Prompt>(prompt);
   const [tagInput, setTagInput] = useState('');
   const [isDirty, setIsDirty] = useState(false);
@@ -131,18 +147,25 @@ export const PromptEditor: React.FC<PromptEditorProps> = ({ prompt, onUpdate, av
     e.preventDefault();
     e.stopPropagation();
 
-    if (window.confirm("Restore this version? Unsaved changes in the editor will be lost.")) {
-      const updated: Prompt = {
-        ...localPrompt,
-        systemInstruction: version.systemInstruction || '',
-        userPrompt: version.userPrompt || '',
-        lastUpdated: new Date().toISOString()
-      };
+    onShowConfirm({
+      type: 'warning',
+      title: 'Restore Version',
+      message: 'Are you sure you want to restore this version? All unsaved changes in the current editor will be lost.',
+      confirmLabel: 'Restore',
+      onConfirm: () => {
+        const updated: Prompt = {
+          ...localPrompt,
+          systemInstruction: version.systemInstruction || '',
+          userPrompt: version.userPrompt || '',
+          lastUpdated: new Date().toISOString()
+        };
 
-      setLocalPrompt(updated);
-      onUpdate(updated);
-      setIsDirty(false);
-    }
+        setLocalPrompt(updated);
+        onUpdate(updated);
+        setIsDirty(false);
+        onCloseConfirm();
+      }
+    });
   };
 
   return (

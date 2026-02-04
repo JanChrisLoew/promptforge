@@ -5,6 +5,7 @@ import { Dashboard } from './components/Dashboard';
 import { LandingPage } from './components/LandingPage';
 import { SiteFooter } from './components/SiteFooter';
 import { InfoOverlay, InfoType } from './components/InfoOverlay';
+import { ConfirmationModal, ConfirmationType } from './components/ConfirmationModal';
 import { usePromptLibrary } from './hooks/usePromptLibrary';
 
 const App: React.FC = () => {
@@ -27,6 +28,31 @@ const App: React.FC = () => {
   });
   const [showDashboard, setShowDashboard] = useState(true);
   const [overlayType, setOverlayType] = useState<InfoType | null>(null);
+
+  // Confirmation Modal State
+  const [confirmConfig, setConfirmConfig] = useState<{
+    isOpen: boolean;
+    type: ConfirmationType;
+    title: string;
+    message: string;
+    confirmLabel: string;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    type: 'info',
+    title: '',
+    message: '',
+    confirmLabel: '',
+    onConfirm: () => { },
+  });
+
+  const showConfirm = (config: Omit<typeof confirmConfig, 'isOpen'>) => {
+    setConfirmConfig({ ...config, isOpen: true });
+  };
+
+  const closeConfirm = () => {
+    setConfirmConfig(prev => ({ ...prev, isOpen: false }));
+  };
 
   // Sync dashboard state with selection
   useEffect(() => {
@@ -116,8 +142,20 @@ const App: React.FC = () => {
           prompts={prompts}
           selectedId={selectedId}
           onSelect={(id) => { setSelectedId(id); setShowDashboard(false); }}
-          onDelete={deletePrompt}
-          onBulkDelete={bulkDeletePrompts}
+          onDelete={(id) => showConfirm({
+            type: 'danger',
+            title: 'Delete Prompt',
+            message: 'Are you sure you want to delete this prompt? This action cannot be undone.',
+            confirmLabel: 'Delete',
+            onConfirm: () => { deletePrompt(id); closeConfirm(); }
+          })}
+          onBulkDelete={(ids) => showConfirm({
+            type: 'danger',
+            title: 'Delete Selected',
+            message: `Are you sure you want to delete ${ids.length} prompts? This will permanently remove them from your library.`,
+            confirmLabel: 'Delete All',
+            onConfirm: () => { bulkDeletePrompts(ids); closeConfirm(); }
+          })}
           onCreate={() => { createPrompt(); setShowDashboard(false); }}
           onExport={exportLibrary}
           onImport={importLibrary}
@@ -141,6 +179,8 @@ const App: React.FC = () => {
               onUpdate={updatePrompt}
               availableCategories={uniqueCategories}
               isTitleUnique={(title) => checkTitleUnique(title, selectedPrompt.id)}
+              onShowConfirm={showConfirm}
+              onCloseConfirm={closeConfirm}
             />
           </div>
         ) : (
@@ -162,6 +202,16 @@ const App: React.FC = () => {
           onClose={() => setOverlayType(null)}
         />
       )}
+
+      <ConfirmationModal
+        isOpen={confirmConfig.isOpen}
+        type={confirmConfig.type}
+        title={confirmConfig.title}
+        message={confirmConfig.message}
+        confirmLabel={confirmConfig.confirmLabel}
+        onConfirm={confirmConfig.onConfirm}
+        onCancel={closeConfirm}
+      />
 
       {/* Logout Utility for Debug */}
       <button

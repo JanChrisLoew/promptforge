@@ -64,20 +64,16 @@ export const usePromptLibrary = () => {
   }, []);
 
   const deletePrompt = useCallback((id: string) => {
-    if (window.confirm('Are you sure you want to delete this prompt?')) {
-      setPrompts(prev => prev.filter(p => p.id !== id));
-      if (selectedId === id) {
-        setSelectedId(null);
-      }
+    setPrompts(prev => prev.filter(p => p.id !== id));
+    if (selectedId === id) {
+      setSelectedId(null);
     }
   }, [selectedId]);
 
   const bulkDeletePrompts = useCallback((ids: string[]) => {
-    if (window.confirm(`Are you sure you want to delete ${ids.length} prompts?`)) {
-      setPrompts(prev => prev.filter(p => !ids.includes(p.id)));
-      if (selectedId && ids.includes(selectedId)) {
-        setSelectedId(null);
-      }
+    setPrompts(prev => prev.filter(p => !ids.includes(p.id)));
+    if (selectedId && ids.includes(selectedId)) {
+      setSelectedId(null);
     }
   }, [selectedId]);
 
@@ -113,13 +109,9 @@ export const usePromptLibrary = () => {
 
         if (merged.length > prompts.length || stats.updated > 0) {
           setPrompts(merged);
-          alert(`Import Complete:\n• ${stats.new} New Prompts Added\n• ${stats.updated} Updated\n• ${stats.errors} Skipped`);
-        } else if (stats.errors > 0) {
-          alert(`Import Failed: ${stats.errors} invalid prompts skipped.`);
         }
       } catch (err) {
         console.error(err);
-        alert("Invalid JSON file");
       }
     };
     reader.readAsText(file);
