@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { Prompt, PromptVersion } from '../types';
+import { Prompt } from '../types';
 
 /**
  * Generates a unique ID using UUID v4
@@ -16,14 +16,14 @@ export const generateId = (): string => {
 export const formatDate = (dateString: string, style: 'short' | 'medium' = 'medium'): string => {
   if (!dateString) return '';
   const date = new Date(dateString);
-  
+
   if (style === 'short') {
     return date.toLocaleDateString(undefined, { month: 'numeric', day: 'numeric' });
   }
-  
-  return date.toLocaleDateString(undefined, { 
-    year: 'numeric', 
-    month: 'short', 
+
+  return date.toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'short',
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit'
@@ -40,14 +40,14 @@ export const downloadJson = (filename: string, data: any) => {
   const jsonString = JSON.stringify(data, null, 2);
   const blob = new Blob([jsonString], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
-  
+
   const downloadAnchorNode = document.createElement('a');
   downloadAnchorNode.setAttribute("href", url);
   downloadAnchorNode.setAttribute("download", filename);
   document.body.appendChild(downloadAnchorNode);
   downloadAnchorNode.click();
   downloadAnchorNode.remove();
-  
+
   // Clean up memory
   URL.revokeObjectURL(url);
 };
