@@ -34,9 +34,9 @@ export const PromptCategory: React.FC<PromptCategoryProps> = React.memo(({
                 onClick={() => onToggle(category)}
                 className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold text-txt-secondary uppercase hover:bg-canvas-hover rounded-md transition-colors"
             >
-                {isExpanded ? <ChevronDown size={14} className="text-accent-2" /> : <ChevronRight size={14} className="text-txt-muted" />}
-                {isExpanded ? <FolderOpen size={14} className="text-accent-2" /> : <Folder size={14} className="text-txt-muted" />}
-                {category} <span className="ml-auto bg-slate-100 text-txt-muted px-2 py-0.5 rounded-full text-[10px]">{items.length}</span>
+                {isExpanded ? <ChevronDown size={14} className="text-accent-2 transition-transform duration-200" /> : <ChevronRight size={14} className="text-txt-muted transition-transform duration-200" />}
+                {isExpanded ? <FolderOpen size={14} className="text-accent-2 transition-colors duration-200" /> : <Folder size={14} className="text-txt-muted transition-colors duration-200" />}
+                {category} <span className="ml-auto bg-canvas-base text-txt-muted px-2 py-0.5 rounded-full text-[10px] border border-color-border font-bold">{items.length}</span>
             </button>
 
             {isExpanded && (

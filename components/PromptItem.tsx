@@ -25,8 +25,8 @@ export const PromptItem: React.FC<PromptItemProps> = React.memo(({
     return (
         <div
             className={`group flex items-center p-3 rounded-lg cursor-pointer transition-all border relative ${isSelected
-                ? 'bg-accent-3/10 border-accent-3 shadow-sm'
-                : 'bg-transparent border-transparent hover:bg-canvas-hover hover:border-slate-200'
+                ? 'bg-accent-3/15 border-accent-3 shadow-md translate-x-1'
+                : 'bg-transparent border-transparent hover:bg-canvas-hover hover:border-color-border hover:shadow-sm'
                 }`}
         >
             <div className="mr-3 flex-shrink-0">
@@ -38,7 +38,7 @@ export const PromptItem: React.FC<PromptItemProps> = React.memo(({
                         e.stopPropagation();
                         onToggleBulkSelect(prompt.id);
                     }}
-                    className="w-4 h-4 rounded border-slate-300 text-accent-3 focus:ring-accent-3 accent-accent-3 cursor-pointer"
+                    className="w-4 h-4 rounded border-color-border text-accent-3 focus:ring-accent-3 accent-accent-3 cursor-pointer transition-all"
                 />
             </div>
             <div className="flex-1 min-w-0 pr-2" onClick={() => onSelect(prompt.id)}>
@@ -47,7 +47,7 @@ export const PromptItem: React.FC<PromptItemProps> = React.memo(({
                 </h3>
                 <div className="flex flex-wrap gap-1.5 mt-1.5">
                     {prompt.tags.slice(0, 2).map(tag => (
-                        <span key={tag} className="text-[10px] px-2 py-0.5 bg-slate-100 text-txt-secondary border border-slate-200 rounded-md font-medium">
+                        <span key={tag} className="text-[10px] px-2 py-0.5 bg-canvas-base text-txt-secondary border border-color-border rounded-md font-bold tracking-tight">
                             {tag}
                         </span>
                     ))}
@@ -64,8 +64,8 @@ export const PromptItem: React.FC<PromptItemProps> = React.memo(({
                 className={`
           flex-shrink-0 p-2 rounded-md transition-all z-10 relative
           ${isSelected
-                        ? 'opacity-100 text-txt-muted hover:text-accent-1 hover:bg-red-50'
-                        : 'opacity-0 group-hover:opacity-100 text-txt-muted hover:text-accent-1 hover:bg-red-50'}
+                        ? 'opacity-100 text-txt-muted hover:text-accent-1 hover:bg-accent-1/10'
+                        : 'opacity-0 group-hover:opacity-100 text-txt-muted hover:text-accent-1 hover:bg-accent-1/10'}
         `}
                 title="Delete"
             >

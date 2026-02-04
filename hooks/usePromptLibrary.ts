@@ -136,6 +136,7 @@ export const usePromptLibrary = () => {
     checkTitleUnique,
     exportLibrary,
     importLibrary,
-    bulkDeletePrompts
+    bulkDeletePrompts,
+    isLoaded
   };
 };

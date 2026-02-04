@@ -102,8 +102,8 @@ export const PromptList: React.FC<PromptListProps> = ({
   }, []);
 
   return (
-    <div className="flex flex-col h-full bg-canvas-card border-r border-slate-200 w-full md:w-80 flex-shrink-0 text-txt-primary z-20 relative">
-      <div className="p-4 border-b border-slate-200 space-y-4">
+    <div className="flex flex-col h-full bg-canvas-card border-r border-color-border w-full md:w-80 flex-shrink-0 text-txt-primary z-20 relative transition-colors duration-300">
+      <div className="p-4 border-b border-color-border space-y-4">
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-bold text-txt-primary flex items-center gap-2">
             <span className="w-8 h-8 bg-accent-1 rounded-lg flex items-center justify-center text-white text-lg shadow-md">P</span>
@@ -120,7 +120,7 @@ export const PromptList: React.FC<PromptListProps> = ({
             </button>
 
             {showMenu && (
-              <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
+              <div className="absolute right-0 top-full mt-2 w-48 bg-canvas-card rounded-xl shadow-xl border border-color-border overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
                 <div className="py-1">
                   <label className="flex items-center gap-3 px-4 py-3 text-sm text-txt-primary hover:bg-canvas-hover cursor-pointer transition-colors">
                     <Upload size={16} className="text-accent-3" />
@@ -169,12 +169,12 @@ export const PromptList: React.FC<PromptListProps> = ({
               placeholder="Search library..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-txt-primary focus:outline-none focus:ring-2 focus:ring-accent-3/50 focus:border-accent-3 transition-all placeholder:text-txt-muted shadow-sm"
+              className="w-full pl-9 pr-3 py-2 bg-canvas-base border border-color-border rounded-lg text-sm text-txt-primary focus:outline-none focus:ring-2 focus:ring-accent-3/50 focus:border-accent-3 transition-all placeholder:text-txt-muted shadow-sm"
             />
           </div>
           <button
             onClick={() => setSortMode(prev => prev === 'recent' ? 'alpha' : 'recent')}
-            className="p-2 border border-slate-300 rounded-lg bg-white text-txt-secondary hover:text-accent-3 hover:border-accent-3 transition-colors shadow-sm"
+            className="p-2 border border-color-border rounded-lg bg-canvas-base text-txt-secondary hover:text-accent-3 hover:border-accent-3 transition-colors shadow-sm"
             title={`Sort by: ${sortMode === 'recent' ? 'Last Updated' : 'Name (A-Z)'}`}
           >
             {sortMode === 'recent' ? <Clock size={18} /> : <SortAsc size={18} />}

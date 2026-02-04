@@ -4,37 +4,52 @@
 
 /* Define Design Tokens as CSS Variables */
 :root {
-  /* Light Mode (Default) */
-  --color-txt-primary: #222424;
-  --color-txt-secondary: #555757;
-  --color-txt-muted: #767878;
+  /* Light Mode (Default Colors) */
+  --color-txt-primary: #1A1C1C;
+  --color-txt-secondary: #4A4D4D;
+  --color-txt-muted: #666868;
 
   --color-accent-1: #D63C24; /* Red-Orange */
   --color-accent-2: #EF7D00; /* Orange */
-  --color-accent-3: #0090B6; /* Blue */
+  --color-accent-3: #007694; /* Darker Blue for better contrast in Light Mode */
 
-  --color-canvas-base: #F9FAFB;
+  --color-canvas-base: #F3F4F6;
   --color-canvas-card: #FFFFFF;
-  --color-canvas-hover: #F3F4F6;
-  --color-border: #e2e8f0;
+  --color-canvas-hover: #E5E7EB;
+  --color-border: #D1D5DB;
+  
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
 }
 
-/* Dark Mode Overrides (Automatic based on system preference) */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-txt-primary: #F3F4F6;
-    --color-txt-secondary: #9CA3AF;
-    --color-txt-muted: #6B7280;
+/* Dark Mode Overrides */
+.dark {
+  --color-txt-primary: #F9FAFB;
+  --color-txt-secondary: #D1D5DB;
+  --color-txt-muted: #9CA3AF;
 
-    --color-accent-1: #EF4444; /* Slightly brighter Red for dark mode */
-    --color-accent-2: #F97316; /* Brighter Orange */
-    --color-accent-3: #38BDF8; /* Brighter Blue */
+  --color-accent-1: #F87171; /* Brighter Red for dark mode */
+  --color-accent-2: #FB923C; /* Brighter Orange */
+  --color-accent-3: #38BDF8; /* Sky Blue for high contrast on dark */
 
-    --color-canvas-base: #0f172a; /* Slate 900 */
-    --color-canvas-card: #1e293b; /* Slate 800 */
-    --color-canvas-hover: #334155; /* Slate 700 */
-    --color-border: #334155;
-  }
+  --color-canvas-base: #0F172A; /* Slate 900 */
+  --color-canvas-card: #1E293B; /* Slate 800 */
+  --color-canvas-hover: #334155; /* Slate 700 */
+  --color-border: #334155;
+}
+
+/* Skeleton Pulse Animation */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.skeleton {
+  @apply bg-slate-200 dark:bg-slate-700 animate-pulse rounded;
 }
 
 /* Ensure the app takes up the full viewport height */

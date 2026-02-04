@@ -173,7 +173,7 @@ export const PromptEditor: React.FC<PromptEditorProps> = ({ prompt, onUpdate, av
               value={localPrompt.systemInstruction}
               onChange={(e) => handleChange('systemInstruction', e.target.value)}
               placeholder="You are a helpful assistant..."
-              className="w-full h-32 p-4 bg-white text-txt-primary border border-slate-300 rounded-xl shadow-sm focus:ring-2 focus:ring-accent-3/20 focus:border-accent-3 text-sm font-mono leading-relaxed resize-y outline-none transition-all placeholder:text-txt-muted"
+              className="w-full h-32 p-4 bg-canvas-card text-txt-primary border border-color-border rounded-xl shadow-sm focus:ring-2 focus:ring-accent-3/20 focus:border-accent-3 text-sm font-mono leading-relaxed resize-y outline-none transition-all placeholder:text-txt-muted"
             />
             <p className="text-xs text-txt-secondary">Defines the persona and constraints of the model.</p>
           </div>
@@ -184,7 +184,7 @@ export const PromptEditor: React.FC<PromptEditorProps> = ({ prompt, onUpdate, av
               value={localPrompt.userPrompt}
               onChange={(e) => handleChange('userPrompt', e.target.value)}
               placeholder="Explain {{topic}} in simple terms..."
-              className="w-full h-48 p-4 bg-white text-txt-primary border border-slate-300 rounded-xl shadow-sm focus:ring-2 focus:ring-accent-3/20 focus:border-accent-3 text-sm font-mono leading-relaxed resize-y outline-none transition-all placeholder:text-txt-muted"
+              className="w-full h-48 p-4 bg-canvas-card text-txt-primary border border-color-border rounded-xl shadow-sm focus:ring-2 focus:ring-accent-3/20 focus:border-accent-3 text-sm font-mono leading-relaxed resize-y outline-none transition-all placeholder:text-txt-muted"
             />
           </div>
 
