@@ -1,6 +1,3 @@
-<div align="center">
-  <img width="1200" height="475" alt="PromptForge Banner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-  
 # 🛠️ PromptForge
   
   **The ultimate local-first power tool for prompt engineering.**
@@ -11,9 +8,6 @@
   [![React](https://img.shields.io/badge/react-%2320232a.svg?style=for-the-badge&logo=react&logoColor=%2361DAFB)](https://reactjs.org/)
   [![TailwindCSS](https://img.shields.io/badge/tailwindcss-%2338B2AC.svg?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
   [![TypeScript](https://img.shields.io/badge/typescript-%23007ACC.svg?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-</div>
-
-<br />
 
 ## 🌟 Vision
 
@@ -66,6 +60,4 @@ PromptForge is designed for developers and AI enthusiasts who need a professiona
 
 ---
 
-<p align="center">
-  Built with ❤️ for the AI Engineering Community.
-</p>
+Built with ❤️ for the AI Engineering Community.
