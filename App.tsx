@@ -1,9 +1,11 @@
-import React, { useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { PromptList } from './components/PromptList';
 import { PromptEditor } from './components/PromptEditor';
-import { ThemeToggle } from './components/ThemeToggle';
+import { Dashboard } from './components/Dashboard';
+import { LandingPage } from './components/LandingPage';
+import { SiteFooter } from './components/SiteFooter';
+import { InfoOverlay, InfoType } from './components/InfoOverlay';
 import { usePromptLibrary } from './hooks/usePromptLibrary';
-import { Layout, Tag, Database, Activity } from 'lucide-react';
 
 const App: React.FC = () => {
   const {
@@ -19,6 +21,29 @@ const App: React.FC = () => {
     bulkDeletePrompts,
     isLoaded
   } = usePromptLibrary();
+
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return localStorage.getItem('promptforge_auth') === 'true';
+  });
+  const [showDashboard, setShowDashboard] = useState(true);
+  const [overlayType, setOverlayType] = useState<InfoType | null>(null);
+
+  // Sync dashboard state with selection
+  useEffect(() => {
+    if (selectedId) setShowDashboard(false);
+  }, [selectedId]);
+
+  const handleEnter = () => {
+    setIsAuthenticated(true);
+    localStorage.setItem('promptforge_auth', 'true');
+  };
+
+  const handleSignOut = () => {
+    setIsAuthenticated(false);
+    localStorage.removeItem('promptforge_auth');
+    setSelectedId(null);
+    setShowDashboard(true);
+  };
 
   // Derive unique categories for autocomplete
   const uniqueCategories = useMemo(() => {
@@ -42,7 +67,7 @@ const App: React.FC = () => {
   }, [prompts]);
 
   // Prevent data loss on accidental close
-  React.useEffect(() => {
+  useEffect(() => {
     const handleBeforeUnload = () => {
       // If there's an active editor, the PromptEditor component handles its own dirty state via LocalStorage sync.
       // But we can add a generic safety check here if needed.
@@ -69,83 +94,82 @@ const App: React.FC = () => {
     );
   }
 
-  return (
-    <div className="flex h-screen bg-canvas-base text-txt-primary font-sans transition-colors duration-300">
-      <PromptList
-        prompts={prompts}
-        selectedId={selectedId}
-        onSelect={setSelectedId}
-        onDelete={deletePrompt}
-        onBulkDelete={bulkDeletePrompts}
-        onCreate={createPrompt}
-        onExport={exportLibrary}
-        onImport={importLibrary}
-      />
-
-      {selectedPrompt ? (
-        <div className="flex-1 flex flex-col overflow-hidden relative">
-          <PromptEditor
-            key={selectedPrompt.id}
-            prompt={selectedPrompt}
-            onUpdate={updatePrompt}
-            availableCategories={uniqueCategories}
-            isTitleUnique={(title) => checkTitleUnique(title, selectedPrompt.id)}
+  if (!isAuthenticated) {
+    return (
+      <div className="flex flex-col h-screen bg-canvas-base">
+        <LandingPage onEnter={handleEnter} />
+        <SiteFooter onOpenInfo={setOverlayType} />
+        {overlayType && (
+          <InfoOverlay
+            type={overlayType}
+            onClose={() => setOverlayType(null)}
           />
-        </div>
-      ) : (
-        <div className="flex-1 flex flex-col items-center justify-center text-txt-secondary bg-canvas-base p-8 relative overflow-y-auto">
-          <div className="absolute top-4 right-4 z-50">
-            <ThemeToggle />
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col h-screen bg-canvas-base text-txt-primary font-sans transition-colors duration-300">
+      <div className="flex flex-1 overflow-hidden">
+        <PromptList
+          prompts={prompts}
+          selectedId={selectedId}
+          onSelect={(id) => { setSelectedId(id); setShowDashboard(false); }}
+          onDelete={deletePrompt}
+          onBulkDelete={bulkDeletePrompts}
+          onCreate={() => { createPrompt(); setShowDashboard(false); }}
+          onExport={exportLibrary}
+          onImport={importLibrary}
+          onGoHome={() => setShowDashboard(true)}
+          isHomeActive={showDashboard}
+        />
+
+        {showDashboard ? (
+          <Dashboard
+            prompts={prompts}
+            stats={stats}
+            onCreatePrompt={() => { createPrompt(); setShowDashboard(false); }}
+            onImportLibrary={importLibrary}
+            onSelectPrompt={(id) => { setSelectedId(id); setShowDashboard(false); }}
+          />
+        ) : selectedPrompt ? (
+          <div className="flex-1 flex flex-col overflow-hidden relative">
+            <PromptEditor
+              key={selectedPrompt.id}
+              prompt={selectedPrompt}
+              onUpdate={updatePrompt}
+              availableCategories={uniqueCategories}
+              isTitleUnique={(title) => checkTitleUnique(title, selectedPrompt.id)}
+            />
           </div>
+        ) : (
+          <Dashboard
+            prompts={prompts}
+            stats={stats}
+            onCreatePrompt={() => { createPrompt(); setShowDashboard(false); }}
+            onImportLibrary={importLibrary}
+            onSelectPrompt={(id) => { setSelectedId(id); setShowDashboard(false); }}
+          />
+        )}
+      </div>
 
-          <div className="max-w-3xl w-full text-center space-y-12">
-            <div className="space-y-4">
-              <h1 className="text-6xl font-black text-txt-primary tracking-tight">
-                Prompt<span className="text-accent-3">Forge</span>
-              </h1>
-              <p className="text-xl text-txt-muted max-w-lg mx-auto leading-relaxed">
-                A high-performance environment for the modern prompt engineer.
-              </p>
-            </div>
+      <SiteFooter onOpenInfo={setOverlayType} />
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-canvas-card p-8 rounded-2xl border border-color-border shadow-sm flex flex-col items-center transition-all hover:shadow-md hover:border-accent-3/30 group">
-                <Database size={32} className="text-accent-3 mb-4 group-hover:scale-110 transition-transform" />
-                <span className="text-4xl font-black text-txt-primary mb-1">{stats.totalPrompts}</span>
-                <span className="text-xs text-txt-muted uppercase tracking-[0.2em] font-bold">Prompts</span>
-              </div>
-              <div className="bg-canvas-card p-8 rounded-2xl border border-color-border shadow-sm flex flex-col items-center transition-all hover:shadow-md hover:border-accent-2/30 group">
-                <Activity size={32} className="text-accent-2 mb-4 group-hover:scale-110 transition-transform" />
-                <span className="text-4xl font-black text-txt-primary mb-1">{stats.totalVersions}</span>
-                <span className="text-xs text-txt-muted uppercase tracking-[0.2em] font-bold">Versions</span>
-              </div>
-              <div className="bg-canvas-card p-8 rounded-2xl border border-color-border shadow-sm flex flex-col items-center transition-all hover:shadow-md hover:border-accent-1/30 group">
-                <Tag size={32} className="text-accent-1 mb-4 group-hover:scale-110 transition-transform" />
-                <span className="text-4xl font-black text-txt-primary mb-1">{stats.uniqueTags}</span>
-                <span className="text-xs text-txt-muted uppercase tracking-[0.2em] font-bold">Tags</span>
-              </div>
-            </div>
-
-            <div className="bg-canvas-card border border-color-border rounded-2xl p-10 shadow-sm relative overflow-hidden group">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-accent-3/5 rounded-full -mr-16 -mt-16 transition-transform group-hover:scale-150" />
-
-              <h3 className="text-xs font-black text-txt-muted mb-8 uppercase tracking-[0.3em]">Quick Access</h3>
-              <div className="flex flex-wrap justify-center gap-6">
-                <button
-                  onClick={createPrompt}
-                  className="flex items-center gap-3 px-8 py-4 bg-accent-3 text-white rounded-xl hover:bg-accent-3/90 transition-all font-bold shadow-lg shadow-accent-3/20 hover:-translate-y-1 active:translate-y-0"
-                >
-                  <Layout size={20} /> Create New Prompt
-                </button>
-                <label className="flex items-center gap-3 px-8 py-4 bg-canvas-base text-txt-primary border border-color-border rounded-xl hover:bg-canvas-hover transition-all font-bold cursor-pointer hover:-translate-y-1 active:translate-y-0">
-                  <Database size={20} /> Import Library
-                  <input type="file" accept=".json" onChange={importLibrary} className="hidden" />
-                </label>
-              </div>
-            </div>
-          </div>
-        </div>
+      {overlayType && (
+        <InfoOverlay
+          type={overlayType}
+          onClose={() => setOverlayType(null)}
+        />
       )}
+
+      {/* Logout Utility for Debug */}
+      <button
+        onClick={handleSignOut}
+        className="absolute bottom-12 right-4 p-2 text-[10px] text-txt-muted hover:text-accent-1 transition-colors z-[60] opacity-20 hover:opacity-100 font-bold uppercase tracking-widest"
+      >
+        Simulate Logout
+      </button>
     </div>
   );
 };

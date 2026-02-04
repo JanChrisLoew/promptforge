@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { Prompt } from '../types';
-import { Plus, Search, Trash2, Download, Upload, SortAsc, Clock, MoreVertical } from 'lucide-react';
+import { Plus, Search, Trash2, Download, Upload, SortAsc, Clock, MoreVertical, Home } from 'lucide-react';
 import { PromptCategory } from './PromptCategory';
 
 interface PromptListProps {
@@ -12,6 +12,8 @@ interface PromptListProps {
   onImport: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onExport: () => void;
   onBulkDelete: (ids: string[]) => void;
+  onGoHome: () => void;
+  isHomeActive: boolean;
 }
 
 type SortMode = 'alpha' | 'recent';
@@ -24,7 +26,9 @@ export const PromptList: React.FC<PromptListProps> = ({
   onCreate,
   onImport,
   onExport,
-  onBulkDelete
+  onBulkDelete,
+  onGoHome,
+  isHomeActive
 }) => {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['General']));
   const [sortMode, setSortMode] = useState<SortMode>('recent');
@@ -105,10 +109,18 @@ export const PromptList: React.FC<PromptListProps> = ({
     <div className="flex flex-col h-full bg-canvas-card border-r border-color-border w-full md:w-80 flex-shrink-0 text-txt-primary z-20 relative transition-colors duration-300">
       <div className="p-4 border-b border-color-border space-y-4">
         <div className="flex items-center justify-between">
-          <h1 className="text-xl font-bold text-txt-primary flex items-center gap-2">
-            <span className="w-8 h-8 bg-accent-1 rounded-lg flex items-center justify-center text-white text-lg shadow-md">P</span>
-            PromptForge
-          </h1>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={onGoHome}
+              className={`p-2 rounded-lg transition-all ${isHomeActive ? 'bg-accent-3 text-white shadow-md' : 'text-txt-muted hover:bg-canvas-hover hover:text-txt-primary'}`}
+              title="Dashboard / Home"
+            >
+              <Home size={20} />
+            </button>
+            <h1 className="text-xl font-bold text-txt-primary flex items-center gap-2">
+              PromptForge
+            </h1>
+          </div>
 
           <div className="relative" ref={menuRef}>
             <button
