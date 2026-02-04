@@ -1,0 +1,5 @@
+{
+  "name": "PromptForge",
+  "description": "A professional prompt engineering environment to create, organize, and export AI prompts. Features a local library with version control and JSON import/export capabilities.",
+  "requestFramePermissions": []
+}
