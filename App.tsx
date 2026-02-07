@@ -1,12 +1,17 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { MainWorkspace } from './components/MainWorkspace';
 import { LandingPage } from './components/LandingPage';
 import { SiteFooter } from './components/SiteFooter';
 import { InfoOverlay, InfoType } from './components/InfoOverlay';
-import { ConfirmationModal, ConfirmationType } from './components/ConfirmationModal';
+import { ConfirmationModal } from './components/ConfirmationModal';
 import { usePromptLibrary } from './hooks/usePromptLibrary';
+import { useAuthSession } from './hooks/useAuthSession';
+import { useConfirmationModal } from './hooks/useConfirmationModal';
+import { useLibraryStats } from './hooks/useLibraryStats';
+import { useImportHandler } from './hooks/useImportHandler';
 
 const App: React.FC = () => {
+  // ... (keep existing usePromptLibrary, useAuthSession, useConfirmationModal)
   const {
     prompts,
     selectedId,
@@ -20,91 +25,18 @@ const App: React.FC = () => {
     bulkDeletePrompts
   } = usePromptLibrary();
 
-  const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    return localStorage.getItem('promptforge_auth') === 'true';
-  });
+  const { isAuthenticated, login, logout } = useAuthSession();
+  const { confirmConfig, showConfirm, closeConfirm } = useConfirmationModal();
   const [showDashboard, setShowDashboard] = useState(true);
   const [overlayType, setOverlayType] = useState<InfoType | null>(null);
 
-  // Confirmation Modal State
-  const [confirmConfig, setConfirmConfig] = useState<{
-    isOpen: boolean;
-    type: ConfirmationType;
-    title: string;
-    message: string;
-    confirmLabel: string;
-    onConfirm: () => void;
-  }>({
-    isOpen: false,
-    type: 'info',
-    title: '',
-    message: '',
-    confirmLabel: '',
-    onConfirm: () => { },
-  });
-
-  const showConfirm = (config: Omit<typeof confirmConfig, 'isOpen'>) => {
-    setConfirmConfig({ ...config, isOpen: true });
-  };
-
-  const closeConfirm = () => {
-    setConfirmConfig(prev => ({ ...prev, isOpen: false }));
-  };
-
-
-
-  const handleEnter = () => {
-    setIsAuthenticated(true);
-    localStorage.setItem('promptforge_auth', 'true');
-  };
+  const { uniqueCategories, stats } = useLibraryStats(prompts);
+  const handleImport = useImportHandler(importLibrary, showConfirm, closeConfirm);
 
   const handleSignOut = () => {
-    setIsAuthenticated(false);
-    localStorage.removeItem('promptforge_auth');
+    logout();
     setSelectedId(null);
     setShowDashboard(true);
-  };
-
-  // Derive unique categories for autocomplete
-  const uniqueCategories = useMemo(() => {
-    const cats = new Set<string>(['General', 'Work', 'Creative', 'Coding']);
-    prompts.forEach(p => {
-      if (p.category && p.category.trim() !== '') {
-        cats.add(p.category.trim());
-      }
-    });
-    return Array.from(cats).sort();
-  }, [prompts]);
-
-  const stats = useMemo(() => {
-    const totalPrompts = prompts.length;
-    const totalVersions = prompts.reduce((acc: number, p) => acc + (p.versions?.length || 0), 0);
-    const allTags = new Set(prompts.flatMap(p => p.tags));
-    return { totalPrompts, totalVersions, uniqueTags: allTags.size };
-  }, [prompts]);
-
-  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
-    importLibrary(
-      e,
-      (stats) => {
-        showConfirm({
-          type: 'info',
-          title: 'Import Complete',
-          message: `Successfully processed your library:\n• ${stats.new} New Prompts\n• ${stats.updated} Updated\n• ${stats.skipped} Already up-to-date\n${stats.errors > 0 ? `• ${stats.errors} Invalid items skipped` : ''}`,
-          confirmLabel: 'Great',
-          onConfirm: closeConfirm
-        });
-      },
-      (error) => {
-        showConfirm({
-          type: 'danger',
-          title: 'Import Failed',
-          message: error,
-          confirmLabel: 'Try Again',
-          onConfirm: closeConfirm
-        });
-      }
-    );
   };
 
 
@@ -112,7 +44,7 @@ const App: React.FC = () => {
   if (!isAuthenticated) {
     return (
       <div className="flex flex-col h-screen bg-canvas-base">
-        <LandingPage onEnter={handleEnter} />
+        <LandingPage onEnter={login} />
         <SiteFooter onOpenInfo={setOverlayType} />
         {overlayType && (
           <InfoOverlay

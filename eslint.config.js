@@ -70,6 +70,11 @@ export default [
             'react-hooks/exhaustive-deps': 'warn',
             'prefer-const': 'error', // Enforce immutability where possible
             'no-debugger': 'error', // No leftovers from debugging session
+
+            // Quality Guardrails
+            'max-lines-per-function': ['warn', { max: 150, skipBlankLines: true, skipComments: true }],
+            'max-params': ['warn', 4],
+            'complexity': ['warn', 10],
         },
     },
 ];

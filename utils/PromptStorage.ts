@@ -1,5 +1,11 @@
 import { Prompt } from '../types';
 import { generateId, isValidPrompt } from './index';
+import { UNTITLED_PROMPT_TITLE } from '../config';
+
+export interface PromptStorage {
+    load(): Prompt[];
+    save(prompts: Prompt[]): void;
+}
 
 const STORAGE_KEY = 'promptforge_library';
 
@@ -13,33 +19,6 @@ export const DEFAULT_PROMPT: Prompt = {
     tags: [],
     versions: [],
     lastUpdated: '',
-};
-
-export const loadLibrary = (): Prompt[] => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (!saved) return [];
-
-    try {
-        const parsed = JSON.parse(saved);
-        const importList = Array.isArray(parsed) ? parsed : [parsed];
-
-        return importList.map((p: unknown) => migratePrompt(p));
-    } catch (e) {
-        console.error("Failed to load prompts", e);
-        return [];
-    }
-};
-
-export const saveLibrary = (prompts: Prompt[]) => {
-    try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(prompts));
-    } catch (e) {
-        if (e instanceof DOMException && (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED')) {
-            alert("Storage Full: Your prompt library is too large for the browser's local storage. Please export your library and delete some prompts to save more.");
-        } else {
-            console.error("Failed to save library", e);
-        }
-    }
 };
 
 export const migratePrompt = (p: unknown): Prompt => {
@@ -63,11 +42,11 @@ export const migratePrompt = (p: unknown): Prompt => {
         ...DEFAULT_PROMPT,
         ...data,
         id: (data.id as string) || generateId(),
-        title: (data.title as string) || 'Untitled Prompt',
+        title: (data.title as string) || UNTITLED_PROMPT_TITLE,
         versions: safeVersions
     } as Prompt;
 
-    // Cleanup legacy fields
+    // Cleanup legacy fields if any (internal cleanup)
     const draft = sanitized as unknown as Record<string, unknown>;
     delete draft.parameters;
     delete draft.model;
@@ -130,3 +109,37 @@ export const processImport = (json: unknown, currentPrompts: Prompt[]): {
     return { merged: Array.from(currentMap.values()), stats };
 };
 
+export class LocalStoragePromptStorage implements PromptStorage {
+    private key: string;
+
+    constructor(key: string = STORAGE_KEY) {
+        this.key = key;
+    }
+
+    load(): Prompt[] {
+        const saved = localStorage.getItem(this.key);
+        if (!saved) return [];
+
+        try {
+            const parsed = JSON.parse(saved);
+            const importList = Array.isArray(parsed) ? parsed : [parsed];
+            return importList.map((p: unknown) => migratePrompt(p));
+        } catch (e) {
+            console.error("Failed to load prompts", e);
+            return [];
+        }
+    }
+
+    save(prompts: Prompt[]): void {
+        try {
+            localStorage.setItem(this.key, JSON.stringify(prompts));
+        } catch (e: unknown) {
+            if (e instanceof DOMException && (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED')) {
+                throw new Error("Storage Full: Your prompt library is too large for the browser's local storage.");
+            } else {
+                console.error("Failed to save library", e);
+                throw e;
+            }
+        }
+    }
+}

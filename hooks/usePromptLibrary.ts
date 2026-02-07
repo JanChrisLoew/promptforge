@@ -1,11 +1,14 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Prompt } from '../types';
 import { generateId, downloadJson } from '../utils';
-import { loadLibrary, saveLibrary, processImport, DEFAULT_PROMPT } from '../utils/storage';
+import { LocalStoragePromptStorage, processImport, DEFAULT_PROMPT } from '../utils/PromptStorage';
+import { DEFAULT_PROMPT_TITLE } from '../config';
+
+const storage = new LocalStoragePromptStorage();
 
 export const usePromptLibrary = () => {
   const [prompts, setPrompts] = useState<Prompt[]>(() => {
-    const loaded = loadLibrary();
+    const loaded = storage.load();
     if (loaded.length === 0) {
       return [{
         ...DEFAULT_PROMPT,
@@ -24,9 +27,15 @@ export const usePromptLibrary = () => {
   const isMounted = useRef(false);
 
   // 1. Persistence Effect
+  // 1. Persistence Effect
   useEffect(() => {
     if (isMounted.current) {
-      saveLibrary(prompts);
+      try {
+        storage.save(prompts);
+      } catch (e) {
+        console.error("Auto-save failed:", e);
+        // Ideally invoke an onError callback here if one was passed or set state to show global error
+      }
     } else {
       isMounted.current = true;
     }
@@ -35,8 +44,11 @@ export const usePromptLibrary = () => {
   // Actions
   const createPrompt = useCallback(async () => {
     const newId = generateId();
+    // ... (remove)
+
+    // ...
     setPrompts(prev => {
-      const baseTitle = 'New Prompt';
+      const baseTitle = DEFAULT_PROMPT_TITLE;
       let title = baseTitle;
       let counter = 1;
       while (prev.some(p => p.title.toLowerCase() === title.toLowerCase())) {
