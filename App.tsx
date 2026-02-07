@@ -61,7 +61,10 @@ const AppContent: React.FC = () => {
           title: 'Delete Prompt',
           message: 'Are you sure you want to delete this prompt?',
           confirmLabel: 'Delete',
-          onConfirm: () => deletePrompt(id)
+          onConfirm: () => {
+            deletePrompt(id);
+            closeConfirm();
+          }
         })}
         onBulkDelete={bulkDeletePrompts}
         onImport={handleImportClick}

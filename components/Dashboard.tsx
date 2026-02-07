@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { Layout, Database, Activity, Tag, Clock, ArrowRight } from 'lucide-react';
 import { Prompt } from '../types';
 import { formatDate } from '../utils';
+import { DashboardDataViz } from './DashboardDataViz';
 
 interface DashboardProps {
     prompts: Prompt[];
@@ -77,6 +78,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
                         </div>
                     </div>
                 </div>
+
+                {/* Data Visualization */}
+                <DashboardDataViz prompts={prompts} />
 
                 {/* Content Sections */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

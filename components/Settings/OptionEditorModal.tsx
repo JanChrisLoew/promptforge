@@ -1,3 +1,4 @@
+/* eslint-disable max-lines-per-function */
 import React, { useState } from 'react';
 import { X, Check, FileText, Plus, Trash2 } from 'lucide-react';
 

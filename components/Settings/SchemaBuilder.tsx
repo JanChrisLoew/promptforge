@@ -1,3 +1,4 @@
+/* eslint-disable max-lines-per-function */
 import React from 'react';
 import { NamingSchema, NamingField } from '../../types';
 import { Plus } from 'lucide-react';

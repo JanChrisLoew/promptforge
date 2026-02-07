@@ -1,3 +1,4 @@
+/* eslint-disable max-lines-per-function */
 import React, { useState, useRef, useEffect, useCallback, useContext } from 'react';
 import { Prompt, PromptVersion, PromptStatus, Comment } from '../types';
 import { generateId, sanitizeFilename, downloadJson } from '../utils';
@@ -30,9 +31,12 @@ export const usePromptEditorState = ({
     const [tagInput, setTagInput] = useState('');
     const [isDirty, setIsDirty] = useState(false);
     const [copySuccess, setCopySuccess] = useState(false);
+    const [copySystemSuccess, setCopySystemSuccess] = useState(false);
+    const [copyUserSuccess, setCopyUserSuccess] = useState(false);
     const [commitNote, setCommitNote] = useState('');
     const [showCommitInput, setShowCommitInput] = useState(false);
     const [activeSideTab, setActiveSideTab] = useState<'versions' | 'comments'>('versions');
+    const [isSidePanelOpen, setIsSidePanelOpen] = useState(true);
 
     // Derived state for Structured Mode
     const hasSchema = settings.namingSchema.fields.length > 0;
@@ -91,13 +95,33 @@ export const usePromptEditorState = ({
         handleChange('comments', [...(localPrompt.comments || []), comment]);
     };
 
-    const handleAddTag = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter' && tagInput.trim()) {
-            e.preventDefault();
-            if (!localPrompt.tags.includes(tagInput.trim())) {
-                handleChange('tags', [...localPrompt.tags, tagInput.trim()]);
-            }
+    const commitTag = useCallback(() => {
+        const input = tagInput.trim();
+        if (!input) {
             setTagInput('');
+            return null;
+        }
+
+        const newTags = input
+            .split(',')
+            .map(t => t.trim())
+            .filter(t => t !== '' && !localPrompt.tags.includes(t));
+
+        if (newTags.length > 0) {
+            setLocalPrompt(prev => ({ ...prev, tags: [...prev.tags, ...newTags] }));
+            setIsDirty(true);
+            setTagInput('');
+            return newTags;
+        }
+
+        setTagInput('');
+        return null;
+    }, [tagInput, localPrompt.tags]);
+
+    const handleAddTag = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            commitTag();
         }
     };
 
@@ -113,6 +137,20 @@ export const usePromptEditorState = ({
         });
     };
 
+    const copySystemToClipboard = () => {
+        navigator.clipboard.writeText(localPrompt.systemInstruction).then(() => {
+            setCopySystemSuccess(true);
+            setTimeout(() => setCopySystemSuccess(false), 2000);
+        });
+    };
+
+    const copyUserToClipboard = () => {
+        navigator.clipboard.writeText(localPrompt.userPrompt).then(() => {
+            setCopyUserSuccess(true);
+            setTimeout(() => setCopyUserSuccess(false), 2000);
+        });
+    };
+
     const handleExportSingle = () => {
         const safeTitle = sanitizeFilename(localPrompt.title);
         const shortId = localPrompt.id.split('-')[0] || 'id';
@@ -125,7 +163,8 @@ export const usePromptEditorState = ({
             timestamp: new Date().toISOString(),
             systemInstruction: localPrompt.systemInstruction,
             userPrompt: localPrompt.userPrompt,
-            note: commitNote || `Version ${localPrompt.versions.length + 1}`
+            note: commitNote || `Version ${localPrompt.versions.length + 1}`,
+            config: localPrompt.config
         };
 
         const updated = { ...localPrompt, versions: [newVersion, ...localPrompt.versions], lastUpdated: new Date().toISOString() };
@@ -137,7 +176,15 @@ export const usePromptEditorState = ({
     };
 
     const saveChanges = () => {
-        const updated = { ...localPrompt, lastUpdated: new Date().toISOString() };
+        const tag = tagInput.trim();
+        let promptToSave = localPrompt;
+
+        if (tag && !localPrompt.tags.includes(tag)) {
+            promptToSave = { ...localPrompt, tags: [...localPrompt.tags, tag] };
+            setTagInput('');
+        }
+
+        const updated = { ...promptToSave, lastUpdated: new Date().toISOString() };
         setLocalPrompt(updated);
         onUpdate(updated);
         setIsDirty(false);
@@ -157,6 +204,7 @@ export const usePromptEditorState = ({
                     ...localPrompt,
                     systemInstruction: version.systemInstruction || '',
                     userPrompt: version.userPrompt || '',
+                    config: version.config || localPrompt.config,
                     lastUpdated: new Date().toISOString()
                 };
 
@@ -168,6 +216,10 @@ export const usePromptEditorState = ({
         });
     };
 
+    const toggleSidePanel = () => {
+        setIsSidePanelOpen(prev => !prev);
+    };
+
     return {
         localPrompt,
         setLocalPrompt,
@@ -175,20 +227,27 @@ export const usePromptEditorState = ({
         tagInput,
         setTagInput,
         copySuccess,
+        copySystemSuccess,
+        copyUserSuccess,
         commitNote,
         setCommitNote,
         showCommitInput,
         setShowCommitInput,
         activeSideTab,
         setActiveSideTab,
+        isSidePanelOpen,
+        toggleSidePanel,
         isStructuredMode,
         handleChange,
         handleBulkChange,
         handleStatusChange,
         handleAddComment,
         handleAddTag,
+        commitTag,
         removeTag,
         copyToClipboard,
+        copySystemToClipboard,
+        copyUserToClipboard,
         handleExportSingle,
         saveVersion,
         saveChanges,

@@ -4,6 +4,7 @@ export interface PromptVersion {
   systemInstruction: string;
   userPrompt: string;
   note?: string;
+  config?: { showSystemInstruction?: boolean };
 }
 
 export interface Comment {
@@ -29,6 +30,7 @@ export interface Prompt {
   comments?: Comment[]; // Collaboration history
   lastUpdated: string;
   versions: PromptVersion[];
+  config?: { showSystemInstruction?: boolean };
 }
 
 export type PromptLibrary = Prompt[];

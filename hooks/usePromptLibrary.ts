@@ -16,7 +16,9 @@ export const usePromptLibrary = () => {
       folderPath: p.folderPath || (p.category ? `/${p.category}` : '/General'),
       comments: p.comments || [],
       status: p.status || 'draft',
-      metadata: p.metadata || {}
+      metadata: p.metadata || {},
+      config: p.config || { showSystemInstruction: true },
+      tags: p.tags || []
     }));
 
     if (migrated.length === 0) {
@@ -71,7 +73,7 @@ export const usePromptLibrary = () => {
         id: newId,
         title: title,
         lastUpdated: new Date().toISOString(),
-        // Potentially use author here if Prompt type supports it, otherwise ignore
+        config: { showSystemInstruction: false } // Hidden by default for new
       };
       return [newPrompt, ...prev];
     });

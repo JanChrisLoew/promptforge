@@ -3,6 +3,8 @@ import { AppSettings, NamingSchema } from '../types';
 import { DEFAULT_SETTINGS, STORAGE_KEY } from '../constants/settings.constants';
 import { SettingsContext } from './SettingsContextDefinition';
 
+export { SettingsContext };
+
 export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     // Lazy initialization to avoid useEffect and double render
     const [settings, setSettings] = useState<AppSettings>(() => {

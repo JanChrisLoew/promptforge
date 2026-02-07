@@ -52,6 +52,7 @@ export const MainWorkspace: React.FC<MainWorkspaceProps> = ({
 }) => {
     const selectedPrompt = prompts.find(p => p.id === selectedId);
     const [isEditorDirty, setIsEditorDirty] = React.useState(false);
+    const [isLeftSidebarOpen, setIsLeftSidebarOpen] = React.useState(true);
 
     const handleNavigation = (action: () => void) => {
         if (isEditorDirty) {
@@ -87,6 +88,8 @@ export const MainWorkspace: React.FC<MainWorkspaceProps> = ({
                 onOpenSettings={() => handleNavigation(onOpenSettings)}
                 onUpdatePrompt={onUpdatePrompt}
                 isHomeActive={showDashboard}
+                isOpen={isLeftSidebarOpen}
+                onToggle={() => setIsLeftSidebarOpen(!isLeftSidebarOpen)}
             />
 
             {showDashboard ? (

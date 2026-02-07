@@ -1,10 +1,11 @@
 import React, { useCallback } from 'react';
-import { Ghost } from 'lucide-react';
+import { Ghost, PanelRight } from 'lucide-react';
 import { Prompt } from '../types';
 import { PromptFolder } from './PromptFolder';
 import { PromptListHeader } from './PromptList/PromptListHeader';
 import { PromptListToolbar } from './PromptList/PromptListToolbar';
 import { PromptListActions } from './PromptList/PromptListActions';
+import { AdvancedSearchToolbar } from './PromptList/AdvancedSearchToolbar';
 import { usePromptSearch, usePromptGrouping, useBulkSelection } from '../hooks/usePromptListLogic';
 import { useSettings } from '../hooks/useSettings';
 
@@ -21,6 +22,8 @@ interface PromptListProps {
   onOpenSettings: () => void;
   onUpdatePrompt: (prompt: Prompt) => void;
   isHomeActive: boolean;
+  isOpen: boolean;
+  onToggle: () => void;
 }
 
 export const PromptList: React.FC<PromptListProps> = ({
@@ -35,11 +38,16 @@ export const PromptList: React.FC<PromptListProps> = ({
   onGoHome,
   onOpenSettings,
   onUpdatePrompt,
-  isHomeActive
+  isHomeActive,
+  isOpen,
+  onToggle
 }) => {
   const { settings } = useSettings();
-  const { searchTerm, setSearchTerm, filteredPrompts } = usePromptSearch(prompts);
-  const { sortMode, setSortMode, groupedPrompts, expandedPaths, toggleFolder } = usePromptGrouping(filteredPrompts, settings);
+  const { searchTerm, setSearchTerm, filteredPrompts, activeFilters, setFilter, clearFilters } = usePromptSearch(prompts);
+
+  const isFilterActive = searchTerm.length > 0 || Object.keys(activeFilters).length > 0;
+
+  const { sortMode, setSortMode, groupedPrompts, expandedPaths, toggleFolder } = usePromptGrouping(filteredPrompts, settings, isFilterActive);
   const { selectedIds, toggleBulkSelect, clearSelection } = useBulkSelection();
 
   const handleDelete = useCallback((e: React.MouseEvent, id: string) => {
@@ -67,58 +75,100 @@ export const PromptList: React.FC<PromptListProps> = ({
     }
   }, [prompts, settings.namingSchema.enabled, onUpdatePrompt]);
 
+  const handleBulkDownload = () => {
+    if (selectedIds.size === 0) return;
+
+    const promptsToDownload = prompts.filter(p => selectedIds.has(p.id));
+    const dataStr = JSON.stringify(promptsToDownload, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
+
+    const exportFileDefaultName = `promptforge_export_selected_${new Date().toISOString().slice(0, 10)}.json`;
+
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
+
+    clearSelection();
+  };
+
   return (
-    <div className="flex flex-col h-full bg-canvas-card border-r border-color-border w-full md:w-96 flex-shrink-0 text-txt-primary z-20 relative transition-colors duration-300">
-      <div className="p-4 border-b border-color-border space-y-4">
-        <PromptListHeader
-          onGoHome={onGoHome}
-          isHomeActive={isHomeActive}
-          onImport={onImport}
-          onExport={onExport}
-          onOpenSettings={onOpenSettings}
-        />
+    <div className={`flex flex-col h-full bg-canvas-subtle border-r border-color-border flex-shrink-0 transition-all duration-300 ease-in-out relative
+      ${isOpen ? 'w-[320px] lg:w-[360px]' : 'w-0 border-r-0'}
+    `}>
+      {/* Floating Toggle for closed state */}
+      {!isOpen && (
+        <button
+          onClick={onToggle}
+          className="absolute left-4 top-4 p-1.5 bg-canvas-card border border-color-border rounded-md shadow-lg text-accent-3 hover:text-accent-3 hover:bg-accent-3/10 transition-all z-[100] animate-in fade-in slide-in-from-left-4"
+          title="Open Library"
+        >
+          <PanelRight size={18} />
+        </button>
+      )}
 
-        <PromptListActions
-          selectedIdsCount={selectedIds.size}
-          onBulkDelete={handleBulkDelete}
-          onCreate={onCreate}
-        />
+      <div className={`flex-1 flex flex-col h-full overflow-hidden ${!isOpen ? 'opacity-0 invisible' : 'opacity-100 visible'} transition-opacity duration-200`}>
+        <div className="p-3 border-b border-color-border space-y-3 bg-canvas-base/50 backdrop-blur-sm z-10">
+          <PromptListHeader
+            onGoHome={onGoHome}
+            isHomeActive={isHomeActive}
+            onImport={onImport}
+            onExport={onExport}
+            onOpenSettings={onOpenSettings}
+          />
 
-        <PromptListToolbar
-          searchTerm={searchTerm}
-          setSearchTerm={setSearchTerm}
-          sortMode={sortMode}
-          setSortMode={setSortMode}
-        />
-      </div>
+          <PromptListActions
+            selectedIdsCount={selectedIds.size}
+            onBulkDelete={handleBulkDelete}
+            onBulkDownload={handleBulkDownload}
+            onCreate={onCreate}
+            onToggle={onToggle}
+            isOpen={isOpen}
+          />
 
-      <div className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
-        {Object.keys(groupedPrompts).length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-txt-muted/50">
-            <Ghost size={48} className="mb-4 opacity-50" />
-            <p className="text-sm font-medium">{searchTerm ? 'No matches found' : 'Your library is empty'}</p>
-            {!searchTerm && <p className="text-xs mt-1">Create a new prompt to get started</p>}
-          </div>
-        ) : (
-          Object.values(groupedPrompts)
-            .sort((a, b) => a.name.localeCompare(b.name))
-            .map(node => (
-              <PromptFolder
-                key={node.path}
-                node={node}
-                expandedPaths={expandedPaths}
-                selectedId={selectedId}
-                selectedIds={selectedIds}
-                sortMode={sortMode}
-                onToggle={toggleFolder}
-                onSelect={onSelect}
-                onDelete={handleDelete}
-                onToggleBulkSelect={toggleBulkSelect}
-                onMovePrompt={handleMovePrompt}
-                isManualMode={!settings.namingSchema.enabled}
-              />
-            ))
-        )}
+          <PromptListToolbar
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            sortMode={sortMode}
+            setSortMode={setSortMode}
+          />
+
+          <AdvancedSearchToolbar
+            settings={settings}
+            activeFilters={activeFilters}
+            onFilterChange={setFilter}
+            onClearFilters={clearFilters}
+          />
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
+          {filteredPrompts.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-txt-muted/50">
+              <Ghost size={48} className="mb-4 opacity-50" />
+              <p className="text-sm font-medium">{isFilterActive ? 'No matches found' : 'Your library is empty'}</p>
+              {!isFilterActive && <p className="text-xs mt-1">Create a new prompt to get started</p>}
+            </div>
+          ) : (
+            Object.values(groupedPrompts)
+              .sort((a, b) => a.name.localeCompare(b.name))
+              .map(node => (
+                <PromptFolder
+                  key={node.path}
+                  node={node}
+                  expandedPaths={expandedPaths}
+                  selectedId={selectedId}
+                  selectedIds={selectedIds}
+                  sortMode={sortMode}
+                  onToggle={toggleFolder}
+                  onSelect={onSelect}
+                  onDelete={handleDelete}
+                  onToggleBulkSelect={toggleBulkSelect}
+                  onMovePrompt={handleMovePrompt}
+                  isManualMode={!settings.namingSchema.enabled}
+                />
+              ))
+          )}
+        </div>
       </div>
     </div>
   );

@@ -17,7 +17,7 @@ PromptForge is designed for developers and AI enthusiasts who need a professiona
 
 - **📂 Organized Library**: Categorize prompts and use tags for lightning-fast retrieval.
 - **🔄 Snapshot Versioning**: Save "snapshots" of your prompts. Iterate safely with a full history of your changes.
-- **📋 Template Focused**: Separate System Instructions from User Prompts for clean engineering.
+- **📋 Template Focused**: Separate System-Prompts from User-Prompts for clean engineering.
 - **💾 Local Persistence**: Everything stays on your machine. Data is persisted in LocalStorage.
 - **🚢 Portability**: Export your entire library or individual prompts as JSON for backup or sharing.
 - **🎨 Modern UI**: A sleek, dark-themed (or custom themed) environment built for focus.
