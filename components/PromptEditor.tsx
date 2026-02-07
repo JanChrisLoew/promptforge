@@ -1,11 +1,13 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Prompt, PromptVersion } from '../types';
-import { generateId, sanitizeFilename, downloadJson } from '../utils';
+import React from 'react';
+import { Prompt, PromptStatus } from '../types';
 import { EditorHeader } from './EditorHeader';
 import { TagManager } from './TagManager';
 import { VersionList } from './VersionList';
-import { useDebounce } from '../hooks/useDebounce';
+import { PromptComments } from './PromptComments';
+import { StructuredNameEditor } from './StructuredNameEditor';
 import { ConfirmationType } from './ConfirmationModal';
+import { MessageSquare, History } from 'lucide-react';
+import { usePromptEditorState } from '../hooks/usePromptEditorState';
 
 interface PromptEditorProps {
   prompt: Prompt;
@@ -20,6 +22,7 @@ interface PromptEditorProps {
     onConfirm: () => void;
   }) => void;
   onCloseConfirm: () => void;
+  onDirtyChange?: (isDirty: boolean) => void;
 }
 
 export const PromptEditor: React.FC<PromptEditorProps> = ({
@@ -28,194 +31,141 @@ export const PromptEditor: React.FC<PromptEditorProps> = ({
   availableCategories,
   isTitleUnique,
   onShowConfirm,
-  onCloseConfirm
+  onCloseConfirm,
+  onDirtyChange
 }) => {
-  const [localPrompt, setLocalPrompt] = useState<Prompt>(prompt);
-  const [tagInput, setTagInput] = useState('');
-  const [isDirty, setIsDirty] = useState(false);
-
-  // UI State
-  const [copySuccess, setCopySuccess] = useState(false);
-  const [commitNote, setCommitNote] = useState('');
-  const [showCommitInput, setShowCommitInput] = useState(false);
-
-  // Refs for data safety
-  const localPromptRef = useRef<Prompt>(prompt);
-  const isDirtyRef = useRef(false);
-
-  // Sync refs with state for cleanup access
-  useEffect(() => {
-    localPromptRef.current = localPrompt;
-    isDirtyRef.current = isDirty;
-  }, [localPrompt, isDirty]);
-
-  // No manual reset logic needed here as the parent MainWorkspace uses 
-  // key={prompt.id} to remount this component when the prompt changes.
-
-  // Debounced Auto-save
-  const debouncedPrompt = useDebounce(localPrompt, 600);
-
-  useEffect(() => {
-    if (isDirty && debouncedPrompt.id === localPrompt.id) {
-      onUpdate({ ...debouncedPrompt, lastUpdated: new Date().toISOString() });
-      // Defer reset to next tick to avoid "cascade render" lint error
-      const timer = setTimeout(() => setIsDirty(false), 0);
-      return () => clearTimeout(timer);
-    }
-  }, [debouncedPrompt, onUpdate, isDirty, localPrompt.id]);
-
-  // Safety Flush on Unmount
-  useEffect(() => {
-    return () => {
-      if (isDirtyRef.current) {
-        onUpdate({ ...localPromptRef.current, lastUpdated: new Date().toISOString() });
-      }
-    };
-  }, [onUpdate]);
-
-  // Keyboard Shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
-        e.preventDefault();
-        setShowCommitInput(true);
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
-
-  const handleChange = (field: keyof Prompt, value: string | string[] | PromptVersion[]) => {
-    setLocalPrompt(prev => ({ ...prev, [field]: value }));
-    setIsDirty(true);
-  };
-
-  const handleAddTag = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && tagInput.trim()) {
-      e.preventDefault();
-      if (!localPrompt.tags.includes(tagInput.trim())) {
-        handleChange('tags', [...localPrompt.tags, tagInput.trim()]);
-      }
-      setTagInput('');
-    }
-  };
-
-  const removeTag = (tagToRemove: string) => {
-    handleChange('tags', localPrompt.tags.filter(t => t !== tagToRemove));
-  };
-
-  const copyToClipboard = () => {
-    const content = `System: ${localPrompt.systemInstruction}\n\nUser: ${localPrompt.userPrompt}`;
-    navigator.clipboard.writeText(content).then(() => {
-      setCopySuccess(true);
-      setTimeout(() => setCopySuccess(false), 2000);
-    });
-  };
-
-  const handleExportSingle = () => {
-    const safeTitle = sanitizeFilename(localPrompt.title);
-    const shortId = localPrompt.id.split('-')[0] || 'id';
-    downloadJson(`prompt_${safeTitle}_${shortId}.json`, localPrompt);
-  };
-
-  const saveVersion = () => {
-    const newVersion: PromptVersion = {
-      id: generateId(),
-      timestamp: new Date().toISOString(),
-      systemInstruction: localPrompt.systemInstruction,
-      userPrompt: localPrompt.userPrompt,
-      note: commitNote || `Version ${localPrompt.versions.length + 1}`
-    };
-
-    const updated = { ...localPrompt, versions: [newVersion, ...localPrompt.versions], lastUpdated: new Date().toISOString() };
-    setLocalPrompt(updated);
-    onUpdate(updated);
-    setCommitNote('');
-    setShowCommitInput(false);
-    setIsDirty(false);
-  };
-
-  const restoreVersion = (e: React.MouseEvent, version: PromptVersion) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    onShowConfirm({
-      type: 'warning',
-      title: 'Restore Version',
-      message: 'Are you sure you want to restore this version? All unsaved changes in the current editor will be lost.',
-      confirmLabel: 'Restore',
-      onConfirm: () => {
-        const updated: Prompt = {
-          ...localPrompt,
-          systemInstruction: version.systemInstruction || '',
-          userPrompt: version.userPrompt || '',
-          lastUpdated: new Date().toISOString()
-        };
-
-        setLocalPrompt(updated);
-        onUpdate(updated);
-        setIsDirty(false);
-        onCloseConfirm();
-      }
-    });
-  };
+  const state = usePromptEditorState({
+    prompt,
+    onUpdate,
+    onShowConfirm,
+    onCloseConfirm,
+    onDirtyChange
+  });
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden bg-canvas-base text-txt-primary">
       <EditorHeader
-        title={localPrompt.title}
-        category={localPrompt.category}
-        isTitleValid={isTitleUnique(localPrompt.title)}
-        onTitleChange={(val) => handleChange('title', val)}
-        onCategoryChange={(val) => handleChange('category', val)}
+        title={state.localPrompt.title}
+        category={state.localPrompt.category}
+        isTitleValid={isTitleUnique(state.localPrompt.title)}
+        onTitleChange={(val) => state.handleChange('title', val)}
+        onCategoryChange={(val) => state.handleChange('category', val)}
         availableCategories={availableCategories}
-        isDirty={isDirty}
-        copySuccess={copySuccess}
-        onCopyContent={copyToClipboard}
-        onExport={handleExportSingle}
-        showCommitInput={showCommitInput}
-        setShowCommitInput={setShowCommitInput}
-        commitNote={commitNote}
-        setCommitNote={setCommitNote}
-        onSaveVersion={saveVersion}
+        isDirty={state.isDirty}
+        copySuccess={state.copySuccess}
+        onCopyContent={state.copyToClipboard}
+        onExport={state.handleExportSingle}
+        showCommitInput={state.showCommitInput}
+        setShowCommitInput={state.setShowCommitInput}
+        commitNote={state.commitNote}
+        setCommitNote={state.setCommitNote}
+        onSaveVersion={state.saveVersion}
+        isReadOnly={state.isStructuredMode}
+        isNamingEnabled={state.isStructuredMode}
+        onSave={state.saveChanges}
       />
+
+      {/* Toolbar / Options Bar */}
+      <div className="px-6 py-2 border-b border-border-default bg-canvas-subtle flex items-center gap-4 justify-between">
+        <div className="flex items-center gap-4">
+          {state.isStructuredMode && (
+            <div className="flex items-center gap-2 px-2 py-1 bg-accent-1/10 rounded border border-accent-1/20">
+              <span className="text-[10px] font-bold text-accent-1 uppercase tracking-wider">
+                Structured Naming Active
+              </span>
+            </div>
+          )}
+
+          <div className="h-4 w-px bg-border-default" />
+
+          <select
+            value={state.localPrompt.status || 'draft'}
+            onChange={(e) => state.handleStatusChange(e.target.value as PromptStatus)}
+            className="text-xs font-bold uppercase bg-canvas-base border border-border-default rounded px-2 py-1 outline-none focus:border-accent-1"
+          >
+            <option value="draft">Draft</option>
+            <option value="review">Review</option>
+            <option value="approved">Approved</option>
+            <option value="archived">Archived</option>
+          </select>
+        </div>
+      </div>
 
       <div className="flex-1 flex overflow-hidden">
         <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
+
+          {state.isStructuredMode && (
+            <StructuredNameEditor
+              metadata={state.localPrompt.metadata || {}}
+              onUpdate={(meta, title) => {
+                state.handleBulkChange({
+                  metadata: meta,
+                  title: title
+                });
+              }}
+            />
+          )}
+
           <div className="space-y-2">
             <label className="block text-sm font-bold text-txt-primary">System Instructions</label>
             <textarea
-              value={localPrompt.systemInstruction}
-              onChange={(e) => handleChange('systemInstruction', e.target.value)}
+              value={state.localPrompt.systemInstruction}
+              onChange={(e) => state.handleChange('systemInstruction', e.target.value)}
               placeholder="You are a helpful assistant..."
               className="w-full h-32 p-4 bg-canvas-card text-txt-primary border border-color-border rounded-xl shadow-sm focus:ring-2 focus:ring-accent-3/20 focus:border-accent-3 text-sm font-mono leading-relaxed resize-y outline-none transition-all placeholder:text-txt-muted"
             />
-            <p className="text-xs text-txt-secondary">Defines the persona and constraints of the model.</p>
           </div>
 
           <div className="space-y-2">
             <label className="block text-sm font-bold text-txt-primary">User Prompt / Template</label>
             <textarea
-              value={localPrompt.userPrompt}
-              onChange={(e) => handleChange('userPrompt', e.target.value)}
+              value={state.localPrompt.userPrompt}
+              onChange={(e) => state.handleChange('userPrompt', e.target.value)}
               placeholder="Explain {{topic}} in simple terms..."
               className="w-full h-48 p-4 bg-canvas-card text-txt-primary border border-color-border rounded-xl shadow-sm focus:ring-2 focus:ring-accent-3/20 focus:border-accent-3 text-sm font-mono leading-relaxed resize-y outline-none transition-all placeholder:text-txt-muted"
             />
           </div>
 
           <TagManager
-            tags={localPrompt.tags}
-            tagInput={tagInput}
-            setTagInput={setTagInput}
-            onAddTag={handleAddTag}
-            onRemoveTag={removeTag}
+            tags={state.localPrompt.tags}
+            tagInput={state.tagInput}
+            setTagInput={state.setTagInput}
+            onAddTag={state.handleAddTag}
+            onRemoveTag={state.removeTag}
           />
         </div>
 
-        <VersionList
-          versions={localPrompt.versions}
-          onRestoreVersion={restoreVersion}
-        />
+        {/* Right Side Panel (Tabs) */}
+        <div className="w-96 border-l border-color-border bg-canvas-subtle flex flex-col">
+          <div className="flex border-b border-color-border">
+            <button
+              onClick={() => state.setActiveSideTab('versions')}
+              className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 ${state.activeSideTab === 'versions' ? 'bg-canvas-base border-b-2 border-accent-1 text-accent-1' : 'text-txt-muted hover:text-txt-primary'}`}
+            >
+              <History size={14} /> Versions
+            </button>
+            <button
+              onClick={() => state.setActiveSideTab('comments')}
+              className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 ${state.activeSideTab === 'comments' ? 'bg-canvas-base border-b-2 border-accent-1 text-accent-1' : 'text-txt-muted hover:text-txt-primary'}`}
+            >
+              <MessageSquare size={14} /> Comments
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-hidden relative">
+            {state.activeSideTab === 'versions' ? (
+              <VersionList
+                versions={state.localPrompt.versions}
+                onRestoreVersion={state.restoreVersion}
+              />
+            ) : (
+              <PromptComments
+                comments={state.localPrompt.comments || []}
+                onAddComment={state.handleAddComment}
+              />
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

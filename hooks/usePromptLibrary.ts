@@ -9,15 +9,26 @@ const storage = new LocalStoragePromptStorage();
 export const usePromptLibrary = () => {
   const [prompts, setPrompts] = useState<Prompt[]>(() => {
     const loaded = storage.load();
-    if (loaded.length === 0) {
+
+    // Data Migration: Ensure new fields exist
+    const migrated = loaded.map(p => ({
+      ...p,
+      folderPath: p.folderPath || (p.category ? `/${p.category}` : '/General'),
+      comments: p.comments || [],
+      status: p.status || 'draft',
+      metadata: p.metadata || {}
+    }));
+
+    if (migrated.length === 0) {
       return [{
         ...DEFAULT_PROMPT,
         id: generateId(),
         title: 'New Prompt',
+        folderPath: '/General',
         lastUpdated: new Date().toISOString(),
       }];
     }
-    return loaded;
+    return migrated;
   });
 
   const [selectedId, setSelectedId] = useState<string | null>(() => {
@@ -42,11 +53,10 @@ export const usePromptLibrary = () => {
   }, [prompts]);
 
   // Actions
-  const createPrompt = useCallback(async () => {
+  const createPrompt = useCallback(async (_author?: string) => {
     const newId = generateId();
     // ... (remove)
 
-    // ...
     setPrompts(prev => {
       const baseTitle = DEFAULT_PROMPT_TITLE;
       let title = baseTitle;
@@ -61,6 +71,7 @@ export const usePromptLibrary = () => {
         id: newId,
         title: title,
         lastUpdated: new Date().toISOString(),
+        // Potentially use author here if Prompt type supports it, otherwise ignore
       };
       return [newPrompt, ...prev];
     });

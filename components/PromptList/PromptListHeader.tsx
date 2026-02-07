@@ -1,18 +1,20 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Home, MoreVertical, Upload, Download } from 'lucide-react';
+import { Home, MoreVertical, Upload, Download, Settings } from 'lucide-react';
 
 interface PromptListHeaderProps {
     onGoHome: () => void;
     isHomeActive: boolean;
     onImport: (e: React.ChangeEvent<HTMLInputElement>) => void;
     onExport: () => void;
+    onOpenSettings: () => void;
 }
 
 export const PromptListHeader: React.FC<PromptListHeaderProps> = ({
     onGoHome,
     isHomeActive,
     onImport,
-    onExport
+    onExport,
+    onOpenSettings
 }) => {
     const [showMenu, setShowMenu] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
@@ -65,6 +67,14 @@ export const PromptListHeader: React.FC<PromptListHeaderProps> = ({
                             >
                                 <Download size={16} className="text-accent-3" />
                                 <span>Export Library</span>
+                            </button>
+                            <div className="h-px bg-border-default mx-2 my-1"></div>
+                            <button
+                                onClick={() => { onOpenSettings(); setShowMenu(false); }}
+                                className="w-full flex items-center gap-3 px-4 py-3 text-sm text-txt-primary hover:bg-canvas-hover cursor-pointer transition-colors text-left"
+                            >
+                                <Settings size={16} className="text-accent-3" />
+                                <span>Master Data</span>
                             </button>
                         </div>
                     </div>

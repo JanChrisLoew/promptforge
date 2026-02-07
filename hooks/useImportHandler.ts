@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useRef } from 'react';
 
 type ImportLibraryFn = (
     e: React.ChangeEvent<HTMLInputElement>,
@@ -19,7 +19,13 @@ export const useImportHandler = (
     showConfirm: ShowConfirmFn,
     closeConfirm: () => void
 ) => {
-    const handleImport = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const handleImportClick = useCallback(() => {
+        fileInputRef.current?.click();
+    }, []);
+
+    const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         importLibrary(
             e,
             (stats) => {
@@ -43,5 +49,9 @@ export const useImportHandler = (
         );
     }, [importLibrary, showConfirm, closeConfirm]);
 
-    return handleImport;
+    return {
+        fileInputRef,
+        handleImportClick,
+        handleFileChange
+    };
 };

@@ -28,6 +28,7 @@ interface MainWorkspaceProps {
         onConfirm: () => void;
     }) => void;
     onCloseConfirm: () => void;
+    onOpenSettings: () => void;
 }
 
 export const MainWorkspace: React.FC<MainWorkspaceProps> = ({
@@ -47,21 +48,44 @@ export const MainWorkspace: React.FC<MainWorkspaceProps> = ({
     checkTitleUnique,
     onShowConfirm,
     onCloseConfirm,
+    onOpenSettings,
 }) => {
     const selectedPrompt = prompts.find(p => p.id === selectedId);
+    const [isEditorDirty, setIsEditorDirty] = React.useState(false);
+
+    const handleNavigation = (action: () => void) => {
+        if (isEditorDirty) {
+            onShowConfirm({
+                type: 'warning',
+                title: 'Unsaved Changes',
+                message: 'You have unsaved changes. If you leave now, your changes will be lost.',
+                confirmLabel: 'Discard Changes',
+                onConfirm: () => {
+                    setIsEditorDirty(false);
+                    onCloseConfirm();
+                    // Small timeout to allow state to clear before action
+                    setTimeout(action, 0);
+                }
+            });
+        } else {
+            action();
+        }
+    };
 
     return (
         <div className="flex flex-1 overflow-hidden">
             <PromptList
                 prompts={prompts}
                 selectedId={selectedId}
-                onSelect={onSelect}
+                onSelect={(id) => handleNavigation(() => onSelect(id))}
                 onDelete={onDelete}
                 onBulkDelete={onBulkDelete}
-                onCreate={onCreate}
+                onCreate={() => handleNavigation(onCreate)}
                 onExport={onExport}
                 onImport={onImport}
-                onGoHome={onGoHome}
+                onGoHome={() => handleNavigation(onGoHome)}
+                onOpenSettings={() => handleNavigation(onOpenSettings)}
+                onUpdatePrompt={onUpdatePrompt}
                 isHomeActive={showDashboard}
             />
 
@@ -83,6 +107,7 @@ export const MainWorkspace: React.FC<MainWorkspaceProps> = ({
                         isTitleUnique={(title) => checkTitleUnique(title, selectedPrompt.id)}
                         onShowConfirm={onShowConfirm}
                         onCloseConfirm={onCloseConfirm}
+                        onDirtyChange={setIsEditorDirty}
                     />
                 </div>
             ) : (

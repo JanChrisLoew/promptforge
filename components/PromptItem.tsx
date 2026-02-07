@@ -11,9 +11,43 @@ interface PromptItemProps {
     onSelect: (id: string) => void;
     onDelete: (e: React.MouseEvent, id: string) => void;
     onToggleBulkSelect: (id: string) => void;
+    isDraggable?: boolean;
 }
 
-export const PromptItem: React.FC<PromptItemProps> = React.memo(({
+const SelectionCheckbox: React.FC<{
+    isBulkSelected: boolean;
+    title: string;
+    id: string;
+    onToggle: (id: string) => void;
+}> = ({ isBulkSelected, title, id, onToggle }) => (
+    <div className={`mr-2 flex-shrink-0 mt-0.5 ${!isBulkSelected ? 'opacity-0 group-hover:opacity-100 transition-opacity' : 'opacity-100'}`}>
+        <input
+            type="checkbox"
+            checked={isBulkSelected}
+            aria-label={`Select ${title || 'Untitled Prompt'}`}
+            onChange={(e) => {
+                e.stopPropagation();
+                onToggle(id);
+            }}
+            className="w-3.5 h-3.5 rounded border-2 border-txt-muted/50 text-accent-3 focus:ring-0 focus:ring-offset-0 bg-transparent checked:border-accent-3 checked:bg-accent-3 cursor-pointer transition-all"
+        />
+    </div>
+);
+
+const DeleteButton: React.FC<{
+    id: string;
+    onDelete: (e: React.MouseEvent, id: string) => void;
+}> = ({ id, onDelete }) => (
+    <button
+        onClick={(e) => onDelete(e, id)}
+        className="opacity-0 group-hover:opacity-100 p-1 text-txt-muted hover:text-accent-1 hover:bg-accent-1/10 rounded transition-all ml-1"
+        title="Delete"
+    >
+        <Trash2 size={14} />
+    </button>
+);
+
+export const PromptItem: React.FC<PromptItemProps> = ({
     prompt,
     isSelected,
     isBulkSelected,
@@ -21,37 +55,49 @@ export const PromptItem: React.FC<PromptItemProps> = React.memo(({
     onSelect,
     onDelete,
     onToggleBulkSelect,
+    isDraggable = false,
 }) => {
+    const handleDragStart = (e: React.DragEvent) => {
+        if (!isDraggable) {
+            e.preventDefault();
+            return;
+        }
+        e.dataTransfer.setData('application/prompt-id', prompt.id);
+        e.dataTransfer.effectAllowed = 'move';
+    };
+
     return (
         <div
-            className={`group flex items-center p-3 rounded-lg cursor-pointer transition-all border relative ${isSelected
-                ? 'bg-accent-3/15 border-accent-3 shadow-md translate-x-1'
-                : 'bg-transparent border-transparent hover:bg-canvas-hover hover:border-color-border hover:shadow-sm'
-                }`}
+            draggable={isDraggable}
+            onDragStart={handleDragStart}
+            className={`group flex items-start p-2 rounded-md cursor-pointer transition-all relative select-none ${isSelected
+                ? 'bg-accent-3/10'
+                : 'bg-transparent hover:bg-canvas-hover'
+                } ${isDraggable ? 'cursor-grab active:cursor-grabbing' : ''}`}
+            onClick={() => onSelect(prompt.id)}
         >
-            <div className="mr-3 flex-shrink-0">
-                <input
-                    type="checkbox"
-                    checked={isBulkSelected}
-                    aria-label={`Select ${prompt.title || 'Untitled Prompt'}`}
-                    onChange={(e) => {
-                        e.stopPropagation();
-                        onToggleBulkSelect(prompt.id);
-                    }}
-                    className="w-4 h-4 rounded border-color-border text-accent-3 focus:ring-accent-3 accent-accent-3 cursor-pointer transition-all"
-                />
-            </div>
-            <div className="flex-1 min-w-0 pr-2" onClick={() => onSelect(prompt.id)}>
-                <h3 className={`font-bold text-sm truncate ${isSelected ? 'text-accent-3' : 'text-txt-primary'}`}>
+            {isSelected && (
+                <div className="absolute left-0 top-1 bottom-1 w-0.5 bg-accent-3 rounded-r-full"></div>
+            )}
+
+            <SelectionCheckbox
+                isBulkSelected={isBulkSelected}
+                title={prompt.title}
+                id={prompt.id}
+                onToggle={onToggleBulkSelect}
+            />
+
+            <div className="flex-1 min-w-0 pr-1">
+                <h3 className={`font-semibold text-sm truncate leading-tight mb-1 ${isSelected ? 'text-accent-3' : 'text-txt-primary'}`} title={prompt.title}>
                     {prompt.title || 'Untitled Prompt'}
                 </h3>
-                <div className="flex flex-wrap gap-1.5 mt-1.5">
+                <div className="flex flex-wrap items-center gap-1.5 opacity-80">
                     {prompt.tags.slice(0, 2).map(tag => (
-                        <span key={tag} className="text-[10px] px-2 py-0.5 bg-canvas-base text-txt-secondary border border-color-border rounded-md font-bold tracking-tight">
+                        <span key={tag} className="text-[9px] px-1.5 py-px bg-canvas-base border border-color-border rounded text-txt-secondary tracking-tight">
                             {tag}
                         </span>
                     ))}
-                    <span className="text-[10px] text-txt-muted ml-1 font-mono">
+                    <span className="text-[10px] text-txt-muted ml-auto font-mono">
                         {sortMode === 'recent'
                             ? formatDate(prompt.lastUpdated, 'short')
                             : `v${(prompt.versions?.length || 0) + 1}`
@@ -59,29 +105,8 @@ export const PromptItem: React.FC<PromptItemProps> = React.memo(({
                     </span>
                 </div>
             </div>
-            <button
-                onClick={(e) => onDelete(e, prompt.id)}
-                className={`
-          flex-shrink-0 p-2 rounded-md transition-all z-10 relative
-          ${isSelected
-                        ? 'opacity-100 text-txt-muted hover:text-accent-1 hover:bg-accent-1/10'
-                        : 'opacity-0 group-hover:opacity-100 text-txt-muted hover:text-accent-1 hover:bg-accent-1/10'}
-        `}
-                title="Delete"
-            >
-                <Trash2 size={16} />
-            </button>
+
+            <DeleteButton id={prompt.id} onDelete={onDelete} />
         </div>
     );
-}, (prev, next) => {
-    return (
-        prev.isSelected === next.isSelected &&
-        prev.isBulkSelected === next.isBulkSelected &&
-        prev.sortMode === next.sortMode &&
-        prev.prompt.id === next.prompt.id &&
-        prev.prompt.title === next.prompt.title &&
-        prev.prompt.lastUpdated === next.prompt.lastUpdated &&
-        prev.prompt.tags === next.prompt.tags &&
-        prev.prompt.versions?.length === next.prompt.versions?.length
-    );
-});
+};

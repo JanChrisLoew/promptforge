@@ -1,6 +1,8 @@
 import React from 'react';
-import { Folder, Copy, Check, Download, GitCommit } from 'lucide-react';
+import { Copy, Check, Download, Lock } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
+import { CommitButton } from './CommitButton';
+import { CategorySelect } from './CategorySelect';
 
 interface EditorHeaderProps {
     title: string;
@@ -18,7 +20,98 @@ interface EditorHeaderProps {
     commitNote: string;
     setCommitNote: (note: string) => void;
     onSaveVersion: () => void;
+    isReadOnly?: boolean;
+    isNamingEnabled?: boolean;
+    onSave: () => void;
 }
+
+const EditorTitle: React.FC<{
+    title: string;
+    isReadOnly: boolean;
+    isTitleValid: boolean;
+    onTitleChange: (val: string) => void;
+}> = ({ title, isReadOnly, isTitleValid, onTitleChange }) => (
+    <div className="relative group flex-1 flex items-center gap-2">
+        {isReadOnly && <div className="text-accent-1"><Lock size={16} /></div>}
+        <input
+            type="text"
+            value={title}
+            onChange={(e) => !isReadOnly && onTitleChange(e.target.value)}
+            readOnly={isReadOnly}
+            className={`w-full text-xl font-bold focus:outline-none focus:ring-0 border-none bg-transparent transition-colors ${!isTitleValid ? 'text-accent-1 decoration-wavy underline decoration-accent-1' : 'text-txt-primary'} ${isReadOnly ? 'cursor-default opacity-80' : ''}`}
+            placeholder="Untitled Prompt"
+            title={isReadOnly ? "Managed by Structured Naming" : "Edit Title"}
+        />
+        {!isTitleValid && (
+            <div className="absolute top-full left-0 mt-1 bg-accent-1 text-white text-[10px] font-bold px-2 py-1 rounded shadow-lg z-50 whitespace-nowrap animate-in fade-in slide-in-from-top-1">
+                Name already exists
+            </div>
+        )}
+    </div>
+);
+
+const EditorActions: React.FC<{
+    isDirty: boolean;
+    onSave: () => void;
+    copySuccess: boolean;
+    onCopyContent: () => void;
+    onExport: () => void;
+    showCommitInput: boolean;
+    setShowCommitInput: (show: boolean) => void;
+    commitNote: string;
+    setCommitNote: (val: string) => void;
+    onSaveVersion: () => void;
+}> = ({ isDirty, onSave, copySuccess, onCopyContent, onExport, showCommitInput, setShowCommitInput, commitNote, setCommitNote, onSaveVersion }) => (
+    <div className="flex items-center gap-3">
+        <div className="mr-2 flex items-center gap-2">
+            {isDirty ? (
+                <>
+                    <div className="flex items-center gap-1.5 text-accent-1 text-xs font-bold">
+                        <span className="w-2 h-2 bg-accent-1 rounded-full animate-pulse"></span> Unsaved
+                    </div>
+                    <button
+                        onClick={onSave}
+                        className="text-xs bg-accent-1/10 hover:bg-accent-1/20 text-accent-1 px-2 py-1 rounded font-bold border border-accent-1/20 transition-colors"
+                    >
+                        Save
+                    </button>
+                </>
+            ) : (
+                <div className="flex items-center gap-1.5 text-txt-muted text-xs font-medium opacity-50">
+                    <span className="w-2 h-2 bg-green-500 rounded-full"></span> Saved
+                </div>
+            )}
+        </div>
+
+        <button
+            onClick={onCopyContent}
+            className="p-2 text-txt-muted hover:bg-canvas-base hover:text-accent-3 rounded-lg transition-colors"
+            title="Copy Prompt Content"
+        >
+            {copySuccess ? <Check size={20} className="text-green-500" /> : <Copy size={20} />}
+        </button>
+
+        <button
+            onClick={onExport}
+            className="p-2 text-txt-muted hover:bg-canvas-base hover:text-accent-3 rounded-lg transition-colors"
+            title="Export this Prompt (JSON)"
+        >
+            <Download size={20} />
+        </button>
+
+        <ThemeToggle />
+
+        <div className="h-6 w-px bg-color-border mx-1"></div>
+
+        <CommitButton
+            showCommitInput={showCommitInput}
+            setShowCommitInput={setShowCommitInput}
+            commitNote={commitNote}
+            setCommitNote={setCommitNote}
+            onSaveVersion={onSaveVersion}
+        />
+    </div>
+);
 
 export const EditorHeader: React.FC<EditorHeaderProps> = ({
     title,
@@ -36,102 +129,41 @@ export const EditorHeader: React.FC<EditorHeaderProps> = ({
     commitNote,
     setCommitNote,
     onSaveVersion,
+    isReadOnly = false,
+    isNamingEnabled = false,
+    onSave,
 }) => {
     return (
         <div className="h-16 bg-canvas-card border-b border-color-border flex items-center justify-between px-6 flex-shrink-0 gap-4 shadow-sm z-10 transition-colors duration-300">
             <div className="flex-1 flex items-center gap-4 min-w-0">
-                <div className="relative group">
-                    <input
-                        type="text"
-                        value={title}
-                        onChange={(e) => onTitleChange(e.target.value)}
-                        className={`text-xl font-bold focus:outline-none focus:ring-0 border-none bg-transparent min-w-[200px] transition-colors ${!isTitleValid ? 'text-accent-1 decoration-wavy underline decoration-accent-1' : 'text-txt-primary'}`}
-                        placeholder="Untitled Prompt"
-                    />
-                    {!isTitleValid && (
-                        <div className="absolute top-full left-0 mt-1 bg-accent-1 text-white text-[10px] font-bold px-2 py-1 rounded shadow-lg z-50 whitespace-nowrap animate-in fade-in slide-in-from-top-1">
-                            Name already exists
-                        </div>
-                    )}
-                </div>
+                <EditorTitle
+                    title={title}
+                    isReadOnly={isReadOnly}
+                    isTitleValid={isTitleValid}
+                    onTitleChange={onTitleChange}
+                />
 
-                <div className="flex items-center gap-2 text-txt-muted border-l border-color-border pl-4 group relative">
-                    <Folder size={16} />
-                    <input
-                        type="text"
+                {!isNamingEnabled && (
+                    <CategorySelect
                         value={category}
-                        onChange={(e) => onCategoryChange(e.target.value)}
-                        placeholder="Enter category..."
-                        className="text-sm bg-transparent border border-transparent group-hover:border-color-border focus:border-accent-3 focus:bg-canvas-card focus:ring-2 focus:ring-accent-3/20 text-txt-secondary focus:text-txt-primary placeholder-txt-muted px-2 py-1 rounded transition-all w-48 outline-none font-medium"
-                        list="categories-list"
+                        onChange={onCategoryChange}
+                        categories={availableCategories}
                     />
-                    <datalist id="categories-list">
-                        {availableCategories.map(cat => (
-                            <option key={cat} value={cat} />
-                        ))}
-                    </datalist>
-                </div>
+                )}
             </div>
 
-            <div className="flex items-center gap-3">
-                <div className="mr-2">
-                    {isDirty ? (
-                        <div className="flex items-center gap-1.5 text-accent-2 text-xs font-medium animate-pulse">
-                            <span className="w-2 h-2 bg-accent-2 rounded-full"></span> Saving...
-                        </div>
-                    ) : (
-                        <div className="flex items-center gap-1.5 text-txt-muted text-xs font-medium opacity-50">
-                            <span className="w-2 h-2 bg-green-500 rounded-full"></span> Saved
-                        </div>
-                    )}
-                </div>
-
-                <button
-                    onClick={onCopyContent}
-                    className="p-2 text-txt-muted hover:bg-canvas-base hover:text-accent-3 rounded-lg transition-colors"
-                    title="Copy Prompt Content"
-                >
-                    {copySuccess ? <Check size={20} className="text-green-500" /> : <Copy size={20} />}
-                </button>
-
-                <button
-                    onClick={onExport}
-                    className="p-2 text-txt-muted hover:bg-canvas-base hover:text-accent-3 rounded-lg transition-colors"
-                    title="Export this Prompt (JSON)"
-                >
-                    <Download size={20} />
-                </button>
-
-                <ThemeToggle />
-
-                <div className="h-6 w-px bg-color-border mx-1"></div>
-
-                <div className="relative">
-                    {showCommitInput && (
-                        <div className="absolute right-0 top-12 z-10 bg-canvas-card shadow-xl border border-color-border p-3 rounded-lg w-72 animate-in slide-in-from-top-2">
-                            <input
-                                autoFocus
-                                className="w-full text-xs p-2 border border-color-border rounded mb-2 focus:ring-2 focus:ring-accent-3 focus:border-accent-3 outline-none text-txt-primary bg-canvas-base"
-                                placeholder="What changed? (Press Enter to save)"
-                                value={commitNote}
-                                onChange={e => setCommitNote(e.target.value)}
-                                onKeyDown={e => e.key === 'Enter' && onSaveVersion()}
-                            />
-                            <div className="flex justify-end gap-2">
-                                <button onClick={() => setShowCommitInput(false)} className="text-xs text-txt-secondary hover:text-txt-primary font-bold">Cancel</button>
-                                <button onClick={onSaveVersion} className="text-xs bg-accent-3 hover:bg-accent-3/90 text-white px-3 py-1.5 rounded-md font-bold transition-all active:scale-95 shadow-sm">Save Snapshot</button>
-                            </div>
-                        </div>
-                    )}
-                    <button
-                        onClick={() => setShowCommitInput(!showCommitInput)}
-                        className={`flex items-center gap-2 border hover:border-accent-3 hover:text-accent-3 py-2 px-3 rounded-lg text-sm font-bold transition-all shadow-sm ${showCommitInput ? 'bg-accent-3 text-white border-accent-3 hover:text-white' : 'bg-canvas-card text-txt-secondary border-color-border'}`}
-                        title="Save Version (Ctrl+S)"
-                    >
-                        <GitCommit size={16} /> Save Version
-                    </button>
-                </div>
-            </div>
+            <EditorActions
+                isDirty={isDirty}
+                onSave={onSave}
+                copySuccess={copySuccess}
+                onCopyContent={onCopyContent}
+                onExport={onExport}
+                showCommitInput={showCommitInput}
+                setShowCommitInput={setShowCommitInput}
+                commitNote={commitNote}
+                setCommitNote={setCommitNote}
+                onSaveVersion={onSaveVersion}
+            />
         </div>
     );
 };
