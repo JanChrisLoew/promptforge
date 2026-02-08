@@ -8,6 +8,7 @@ import { PromptListActions } from './PromptList/PromptListActions';
 import { AdvancedSearchToolbar } from './PromptList/AdvancedSearchToolbar';
 import { usePromptSearch, usePromptGrouping, useBulkSelection } from '../hooks/usePromptListLogic';
 import { useSettings } from '../hooks/useSettings';
+import { downloadJson } from '../utils';
 
 interface PromptListProps {
   prompts: Prompt[];
@@ -79,16 +80,9 @@ export const PromptList: React.FC<PromptListProps> = ({
     if (selectedIds.size === 0) return;
 
     const promptsToDownload = prompts.filter(p => selectedIds.has(p.id));
-    const dataStr = JSON.stringify(promptsToDownload, null, 2);
-    const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
-
     const exportFileDefaultName = `promptforge_export_selected_${new Date().toISOString().slice(0, 10)}.json`;
 
-    const linkElement = document.createElement('a');
-    linkElement.setAttribute('href', dataUri);
-    linkElement.setAttribute('download', exportFileDefaultName);
-    linkElement.click();
-
+    downloadJson(exportFileDefaultName, promptsToDownload);
     clearSelection();
   };
 
@@ -150,7 +144,6 @@ export const PromptList: React.FC<PromptListProps> = ({
             </div>
           ) : (
             Object.values(groupedPrompts)
-              .sort((a, b) => a.name.localeCompare(b.name))
               .map(node => (
                 <PromptFolder
                   key={node.path}

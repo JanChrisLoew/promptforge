@@ -28,7 +28,8 @@ const AppContent: React.FC = () => {
     deletePrompt,
     importLibrary,
     exportLibrary,
-    bulkDeletePrompts
+    bulkDeletePrompts,
+    checkTitleUnique
   } = usePromptLibrary();
 
   const { confirmConfig, showConfirm, closeConfirm } = useConfirmationModal();
@@ -39,6 +40,13 @@ const AppContent: React.FC = () => {
   const [showDashboard, setShowDashboard] = useState(true);
   const [overlayType, setOverlayType] = useState<InfoType | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+
+  const uniqueCategories = React.useMemo(() => {
+    return Array.from(new Set([
+      ...settings.manualCategories,
+      ...prompts.map(p => p.category).filter(Boolean)
+    ])).sort();
+  }, [settings.manualCategories, prompts]);
 
   if (!isAuthenticated) {
     return <LandingPage onEnter={login} />;
@@ -72,11 +80,8 @@ const AppContent: React.FC = () => {
         showDashboard={showDashboard}
         onGoHome={() => { setShowDashboard(true); setSelectedId(null); }}
         stats={stats}
-        uniqueCategories={Array.from(new Set([
-          ...settings.manualCategories,
-          ...prompts.map(p => p.category).filter(Boolean)
-        ])).sort()}
-        checkTitleUnique={(title: string) => !prompts.some(p => p.title.toLowerCase() === title.toLowerCase() && p.id !== selectedId)}
+        uniqueCategories={uniqueCategories}
+        checkTitleUnique={(title) => checkTitleUnique(title, selectedId || '')}
         onShowConfirm={showConfirm}
         onCloseConfirm={closeConfirm}
         onOpenSettings={() => setShowSettings(true)}

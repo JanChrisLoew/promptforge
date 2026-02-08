@@ -26,7 +26,21 @@ export const usePromptEditorState = ({
     onCloseConfirm,
     onDirtyChange
 }: UsePromptEditorStateProps) => {
-    const { settings } = useContext(SettingsContext)!;
+    const settingsContext = useContext(SettingsContext);
+
+    // Safety check for SettingsContext
+    if (!settingsContext) {
+        console.warn('usePromptEditorState must be used within a SettingsProvider');
+    }
+
+    const settings = settingsContext?.settings || {
+        // Fallback settings if context is missing (e.g. in isolated tests)
+        userName: 'Guest',
+        theme: 'system',
+        namingSchema: { enabled: false, fields: [], folderNamingType: 'labelValue' },
+        manualCategories: ['General']
+    };
+
     const [localPrompt, setLocalPrompt] = useState<Prompt>(prompt);
     const [tagInput, setTagInput] = useState('');
     const [isDirty, setIsDirty] = useState(false);
@@ -53,29 +67,8 @@ export const usePromptEditorState = ({
         onDirtyChange?.(isDirty);
     }, [localPrompt, isDirty, onDirtyChange]);
 
-    // Debounced Auto-save - DISABLED for manual save workflow
-    /*
-    const debouncedPrompt = useDebounce(localPrompt, 300);
-
-    useEffect(() => {
-        if (isDirty && debouncedPrompt.id === localPrompt.id) {
-            onUpdate({ ...debouncedPrompt, lastUpdated: new Date().toISOString() });
-            const timer = setTimeout(() => setIsDirty(false), 0);
-            return () => clearTimeout(timer);
-        }
-    }, [debouncedPrompt, onUpdate, isDirty, localPrompt.id]);
-    */
-
     // Safety Flush on Unmount - DISABLED per user request for explicit save
-    /*
-    useEffect(() => {
-        return () => {
-            if (isDirtyRef.current) {
-                onUpdate({ ...localPromptRef.current, lastUpdated: new Date().toISOString() });
-            }
-        };
-    }, [onUpdate]);
-    */
+    // (Dead code removed)
 
     const handleChange = useCallback((field: keyof Prompt, value: Prompt[keyof Prompt]) => {
         setLocalPrompt(prev => ({ ...prev, [field]: value }));
@@ -131,10 +124,15 @@ export const usePromptEditorState = ({
 
     const copyToClipboard = () => {
         const content = `System: ${localPrompt.systemInstruction}\n\nUser: ${localPrompt.userPrompt}`;
-        navigator.clipboard.writeText(content).then(() => {
-            setCopySuccess(true);
-            setTimeout(() => setCopySuccess(false), 2000);
-        });
+        navigator.clipboard.writeText(content)
+            .then(() => {
+                setCopySuccess(true);
+                setTimeout(() => setCopySuccess(false), 2000);
+            })
+            .catch(err => {
+                console.error('Failed to copy to clipboard:', err);
+                // Optionally set an error state here
+            });
     };
 
     const copySystemToClipboard = () => {

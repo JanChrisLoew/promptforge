@@ -62,10 +62,13 @@ export const MainWorkspace: React.FC<MainWorkspaceProps> = ({
                 message: 'You have unsaved changes. If you leave now, your changes will be lost.',
                 confirmLabel: 'Discard Changes',
                 onConfirm: () => {
+
+                    // Direct state update instead of timeout if possible, 
+                    // but we need to ensure the action runs after state settles.
+                    // Keep robust flush for now, but remove explicit 0ms timeout if not strictly needed for event loop release.
                     setIsEditorDirty(false);
                     onCloseConfirm();
-                    // Small timeout to allow state to clear before action
-                    setTimeout(action, 0);
+                    window.requestAnimationFrame(() => action());
                 }
             });
         } else {
@@ -80,7 +83,16 @@ export const MainWorkspace: React.FC<MainWorkspaceProps> = ({
                 selectedId={selectedId}
                 onSelect={(id) => handleNavigation(() => onSelect(id))}
                 onDelete={onDelete}
-                onBulkDelete={onBulkDelete}
+                onBulkDelete={(ids) => onShowConfirm({
+                    type: 'danger',
+                    title: 'Delete Prompts',
+                    message: `Are you sure you want to delete ${ids.length} prompts? This action cannot be undone.`,
+                    confirmLabel: `Delete ${ids.length} Prompts`,
+                    onConfirm: () => {
+                        onBulkDelete(ids);
+                        onCloseConfirm();
+                    }
+                })}
                 onCreate={() => handleNavigation(onCreate)}
                 onExport={onExport}
                 onImport={onImport}

@@ -40,22 +40,24 @@ export const usePromptLibrary = () => {
   const isMounted = useRef(false);
 
   // 1. Persistence Effect
-  // 1. Persistence Effect
   useEffect(() => {
     if (isMounted.current) {
-      try {
-        storage.save(prompts);
-      } catch (e) {
-        console.error("Auto-save failed:", e);
-        // Ideally invoke an onError callback here if one was passed or set state to show global error
-      }
+      const handler = setTimeout(() => {
+        try {
+          storage.save(prompts);
+        } catch (e) {
+          console.error("Auto-save failed:", e);
+        }
+      }, 500); // 500ms debounce
+
+      return () => clearTimeout(handler);
     } else {
       isMounted.current = true;
     }
   }, [prompts]);
 
   // Actions
-  const createPrompt = useCallback(async (_author?: string) => {
+  const createPrompt = useCallback((_author?: string) => {
     const newId = generateId();
     // ... (remove)
 
@@ -80,11 +82,11 @@ export const usePromptLibrary = () => {
     setSelectedId(newId);
   }, []);
 
-  const updatePrompt = useCallback(async (updated: Prompt) => {
+  const updatePrompt = useCallback((updated: Prompt) => {
     setPrompts(prev => prev.map(p => p.id === updated.id ? updated : p));
   }, []);
 
-  const deletePrompt = useCallback(async (id: string) => {
+  const deletePrompt = useCallback((id: string) => {
     setPrompts(prev => {
       const updated = prev.filter(p => p.id !== id);
       // Correction logic: if selectedId was deleted, move selection
@@ -95,7 +97,7 @@ export const usePromptLibrary = () => {
     });
   }, [selectedId]);
 
-  const bulkDeletePrompts = useCallback(async (ids: string[]) => {
+  const bulkDeletePrompts = useCallback((ids: string[]) => {
     setPrompts(prev => {
       const updated = prev.filter(p => !ids.includes(p.id));
       // Correction logic: if active selection was in bulk delete
