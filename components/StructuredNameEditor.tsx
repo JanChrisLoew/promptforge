@@ -67,7 +67,7 @@ export const StructuredNameEditor: React.FC<StructuredNameEditorProps> = ({ meta
                     <LayoutTemplate size={14} className="flex-shrink-0" />
                     <span className="flex-shrink-0">Naming</span>
                     {!isExpanded && (
-                        <span className="ml-2 text-[10px] font-medium text-txt-muted italic truncate px-2 py-0.5 rounded-full border border-border-default bg-canvas-base/40 max-w-[400px]">
+                        <span className="ml-2 text-[10px] font-medium text-txt-muted italic truncate px-2 py-0.5 rounded-full border border-border-default bg-canvas-base/40 min-w-0 shrink">
                             {summaryText}
                         </span>
                     )}
@@ -78,10 +78,10 @@ export const StructuredNameEditor: React.FC<StructuredNameEditorProps> = ({ meta
             </div>
 
             {isExpanded && (
-                <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="animate-in fade-in slide-in-from-top-2 duration-200 pt-2">
+                    <div className="flex flex-wrap gap-4">
                         {schema.fields.map((field) => (
-                            <div key={field.id} className="space-y-1">
+                            <div key={field.id} className="space-y-1 w-[180px] flex-shrink-0">
                                 <label className="text-[10px] uppercase font-bold text-txt-muted">{field.label}</label>
                                 {field.type === 'select' ? (
                                     <select
@@ -113,17 +113,17 @@ export const StructuredNameEditor: React.FC<StructuredNameEditorProps> = ({ meta
                                 )}
                             </div>
                         ))}
-                    </div>
 
-                    <div className="space-y-1 pt-2 border-t border-border-default/50">
-                        <label className="text-[10px] uppercase font-bold text-txt-muted">Description (Suffix)</label>
-                        <input
-                            type="text"
-                            value={metadata['description'] || ''}
-                            onChange={(e) => handleChange('description', e.target.value)}
-                            placeholder="Enter short description..."
-                            className="w-full bg-canvas-base border border-border-default rounded px-3 py-2 text-sm focus:border-accent-1 outline-none font-medium"
-                        />
+                        <div className="space-y-1 flex-1 min-w-[200px]">
+                            <label className="text-[10px] uppercase font-bold text-txt-muted">Description (Suffix)</label>
+                            <input
+                                type="text"
+                                value={metadata['description'] || ''}
+                                onChange={(e) => handleChange('description', e.target.value)}
+                                placeholder="Enter short description..."
+                                className="w-full bg-canvas-base border border-border-default rounded px-3 py-2 text-sm focus:border-accent-1 outline-none font-medium"
+                            />
+                        </div>
                     </div>
                 </div>
             )}

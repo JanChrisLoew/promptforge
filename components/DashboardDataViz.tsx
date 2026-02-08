@@ -1,6 +1,6 @@
 import React, { useMemo, useContext } from 'react';
 import { Prompt, AppSettings } from '../types';
-import { FolderOpen, BarChart2 } from 'lucide-react';
+import { FolderOpen, Tag } from 'lucide-react';
 import { SettingsContext } from '../contexts/SettingsContext';
 import { DEFAULT_SETTINGS } from '../constants/settings.constants';
 
@@ -81,38 +81,31 @@ const useDashboardData = (prompts: Prompt[], settings: AppSettings = DEFAULT_SET
         };
     }, [prompts, settings]);
 
-    // 2. Prepare Status Data
-    const statusData = useMemo(() => {
-        const counts: Record<string, number> = {
-            'Draft': 0,
-            'Review': 0,
-            'Approved': 0,
-            'Archived': 0
-        };
-        let maxCount = 0;
-
+    // 2. Prepare Tag Data (Top 7)
+    const tagData = useMemo(() => {
+        const counts: Record<string, number> = {};
         prompts.forEach(p => {
-            const status = p.status ? (p.status.charAt(0).toUpperCase() + p.status.slice(1)) : 'Draft';
-            const key = Object.keys(counts).find(k => k.toLowerCase() === status.toLowerCase()) || 'Draft';
-            counts[key] = (counts[key] || 0) + 1;
+            if (p.tags) {
+                p.tags.forEach(tag => {
+                    counts[tag] = (counts[tag] || 0) + 1;
+                });
+            }
         });
 
-        const data = Object.entries(counts).map(([name, value]) => {
-            if (value > maxCount) maxCount = value;
-            return { name, value };
-        });
-
-        return { data, maxCount };
+        return Object.entries(counts)
+            .map(([name, value]) => ({ name, value }))
+            .sort((a, b) => b.value - a.value)
+            .slice(0, 7);
     }, [prompts]);
 
-    return { folderData, statusData };
+    return { folderData, tagData };
 }
 
 export const DashboardDataViz: React.FC<DashboardDataVizProps> = ({ prompts }) => {
     const context = useContext(SettingsContext);
     const settings = context?.settings || DEFAULT_SETTINGS;
 
-    const { folderData, statusData } = useDashboardData(prompts, settings);
+    const { folderData, tagData } = useDashboardData(prompts, settings);
 
     // --- Pie Chart Rendering Logic ---
     // Use useMemo to calculate slices safely
@@ -172,7 +165,7 @@ export const DashboardDataViz: React.FC<DashboardDataVizProps> = ({ prompts }) =
                             <circle cx="0" cy="0" r="0.6" fill="var(--canvas-card)" />
                         </svg>
                         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                            <span className="text-2xl font-black text-txt-primary">{folderData.total}</span>
+                            <span className="text-3xl font-black text-accent-3">{folderData.total}</span>
                         </div>
                     </div>
 
@@ -191,34 +184,40 @@ export const DashboardDataViz: React.FC<DashboardDataVizProps> = ({ prompts }) =
                 </div>
             </div>
 
-            {/* Status Distribution (CSS Bar Chart) */}
+            {/* Top Tags (Horizontal Bars) */}
             <div className="bg-canvas-card border border-color-border rounded-2xl p-6 shadow-sm flex flex-col">
                 <h3 className="text-sm font-black text-txt-muted uppercase tracking-wider mb-6 flex items-center gap-2">
-                    <BarChart2 size={16} />
-                    Workflow Status
+                    <Tag size={16} />
+                    Top Tags
                 </h3>
-                <div className="flex-1 flex flex-col justify-center gap-4">
-                    {statusData.data.map((item, index) => {
-                        const percent = statusData.maxCount > 0 ? (item.value / statusData.maxCount) * 100 : 0;
-                        return (
-                            <div key={index} className="w-full">
-                                <div className="flex justify-between text-xs mb-1.5">
-                                    <span className="font-bold text-txt-primary">{item.name}</span>
-                                    <span className="text-txt-muted font-mono">{item.value}</span>
+                <div className="flex-1 flex flex-col gap-3 justify-center">
+                    {tagData.length === 0 ? (
+                        <div className="text-center text-txt-muted text-sm italic py-8">No tags used yet</div>
+                    ) : (
+                        tagData.map((item, index) => {
+                            const maxVal = tagData[0].value;
+                            const percent = (item.value / maxVal) * 100;
+                            return (
+                                <div key={item.name} className="flex items-center gap-3 text-xs">
+                                    <div className="w-24 text-right truncate font-bold text-txt-secondary" title={item.name}>
+                                        {item.name}
+                                    </div>
+                                    <div className="flex-1 h-2 bg-canvas-base rounded-full overflow-hidden relative">
+                                        <div
+                                            className="absolute top-0 left-0 h-full rounded-full transition-all duration-500 ease-out"
+                                            style={{
+                                                width: `${percent}%`,
+                                                backgroundColor: COLORS[index % COLORS.length]
+                                            }}
+                                        />
+                                    </div>
+                                    <div className="w-6 font-mono text-txt-muted text-right opacity-70">
+                                        {item.value}
+                                    </div>
                                 </div>
-                                <div className="h-2 w-full bg-canvas-subtle rounded-full overflow-hidden">
-                                    <div
-                                        className="h-full rounded-full transition-all duration-1000 ease-out"
-                                        style={{
-                                            width: `${percent}%`,
-                                            backgroundColor: COLORS[index % COLORS.length],
-                                            opacity: item.value === 0 ? 0.3 : 1
-                                        }}
-                                    />
-                                </div>
-                            </div>
-                        );
-                    })}
+                            );
+                        })
+                    )}
                 </div>
             </div>
         </div>

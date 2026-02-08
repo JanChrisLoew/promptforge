@@ -15,7 +15,7 @@ export const usePromptLibrary = () => {
       ...p,
       folderPath: p.folderPath || (p.category ? `/${p.category}` : '/General'),
       comments: p.comments || [],
-      status: p.status || 'draft',
+
       metadata: p.metadata || {},
       config: p.config || { showSystemInstruction: true },
       tags: p.tags || []
@@ -74,6 +74,7 @@ export const usePromptLibrary = () => {
         ...DEFAULT_PROMPT,
         id: newId,
         title: title,
+        // status: 'draft', // Removed
         lastUpdated: new Date().toISOString(),
         config: { showSystemInstruction: false } // Hidden by default for new
       };
@@ -84,6 +85,10 @@ export const usePromptLibrary = () => {
 
   const updatePrompt = useCallback((updated: Prompt) => {
     setPrompts(prev => prev.map(p => p.id === updated.id ? updated : p));
+  }, []);
+
+  const updatePromptPartial = useCallback((id: string, updates: Partial<Prompt>) => {
+    setPrompts(prev => prev.map(p => p.id === id ? { ...p, ...updates, lastUpdated: new Date().toISOString() } : p));
   }, []);
 
   const deletePrompt = useCallback((id: string) => {
@@ -154,6 +159,7 @@ export const usePromptLibrary = () => {
     setSelectedId,
     createPrompt,
     updatePrompt,
+    updatePromptPartial,
     deletePrompt,
     checkTitleUnique,
     exportLibrary,

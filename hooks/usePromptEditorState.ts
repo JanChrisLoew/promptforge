@@ -1,6 +1,6 @@
 /* eslint-disable max-lines-per-function */
 import React, { useState, useRef, useEffect, useCallback, useContext } from 'react';
-import { Prompt, PromptVersion, PromptStatus, Comment } from '../types';
+import { Prompt, PromptVersion, Comment } from '../types';
 import { generateId, sanitizeFilename, downloadJson } from '../utils';
 import { ConfirmationType } from '../components/ConfirmationModal';
 import { SettingsContext } from '../contexts/SettingsContextDefinition';
@@ -79,10 +79,6 @@ export const usePromptEditorState = ({
         setLocalPrompt(prev => ({ ...prev, ...updates }));
         setIsDirty(true);
     }, []);
-
-    const handleStatusChange = (status: PromptStatus) => {
-        handleChange('status', status);
-    };
 
     const handleAddComment = (comment: Comment) => {
         handleChange('comments', [...(localPrompt.comments || []), comment]);
@@ -238,7 +234,6 @@ export const usePromptEditorState = ({
         isStructuredMode,
         handleChange,
         handleBulkChange,
-        handleStatusChange,
         handleAddComment,
         handleAddTag,
         commitTag,

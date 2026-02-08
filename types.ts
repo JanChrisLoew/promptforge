@@ -14,8 +14,6 @@ export interface Comment {
   timestamp: string;
 }
 
-export type PromptStatus = 'draft' | 'review' | 'approved' | 'archived';
-
 export interface Prompt {
   id: string;
   title: string;
@@ -26,7 +24,6 @@ export interface Prompt {
   systemInstruction: string;
   userPrompt: string;
   tags: string[];
-  status?: PromptStatus; // Workflow status
   comments?: Comment[]; // Collaboration history
   lastUpdated: string;
   versions: PromptVersion[];

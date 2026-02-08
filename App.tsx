@@ -24,6 +24,7 @@ const AppContent: React.FC = () => {
     selectedId,
     setSelectedId,
     updatePrompt,
+    updatePromptPartial,
     createPrompt,
     deletePrompt,
     importLibrary,
@@ -53,7 +54,13 @@ const AppContent: React.FC = () => {
   }
 
   if (showSettings) {
-    return <MasterDataPage onClose={() => setShowSettings(false)} />;
+    return (
+      <MasterDataPage
+        onClose={() => setShowSettings(false)}
+        prompts={prompts}
+        onUpdatePrompt={updatePromptPartial}
+      />
+    );
   }
 
   return (

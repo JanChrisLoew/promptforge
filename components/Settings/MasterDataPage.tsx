@@ -1,11 +1,19 @@
 import React from 'react';
 import { useSettings } from '../../hooks/useSettings';
 import { SchemaBuilder } from './SchemaBuilder';
-import { Settings, Database } from 'lucide-react';
+import { GlobalTagManager } from './GlobalTagManager';
+import { Settings, Database, Tag } from 'lucide-react';
+import { Prompt } from '../../types';
 
-export const MasterDataPage: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+interface MasterDataPageProps {
+    onClose: () => void;
+    prompts: Prompt[];
+    onUpdatePrompt: (id: string, updates: Partial<Prompt>) => void;
+}
+
+export const MasterDataPage: React.FC<MasterDataPageProps> = ({ onClose, prompts, onUpdatePrompt }) => {
     const { settings, updateNamingSchema, updateManualCategories } = useSettings();
-    const [activeTab, setActiveTab] = React.useState<'naming' | 'categories'>('naming');
+    const [activeTab, setActiveTab] = React.useState<'naming' | 'categories' | 'tags'>('naming');
     const [newCategory, setNewCategory] = React.useState('');
 
     const handleAddCategory = (e: React.FormEvent) => {
@@ -61,6 +69,13 @@ export const MasterDataPage: React.FC<{ onClose: () => void }> = ({ onClose }) =
                             <Database size={18} /> Category Manager
                         </button>
                     )}
+                    <button
+                        onClick={() => setActiveTab('tags')}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${activeTab === 'tags' ? 'bg-accent-surface text-accent-1' : 'text-txt-secondary hover:bg-canvas-base hover:text-txt-primary'
+                            }`}
+                    >
+                        <Tag size={18} /> Tag Manager
+                    </button>
                 </div>
 
                 {/* Panel */}
@@ -122,6 +137,12 @@ export const MasterDataPage: React.FC<{ onClose: () => void }> = ({ onClose }) =
                                     )}
                                 </div>
                             </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'tags' && (
+                        <div className="max-w-4xl mx-auto">
+                            <GlobalTagManager prompts={prompts} onUpdatePrompt={onUpdatePrompt} />
                         </div>
                     )}
                 </div>

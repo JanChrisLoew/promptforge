@@ -1,6 +1,6 @@
 /* eslint-disable complexity */
 import React from 'react';
-import { Prompt, PromptStatus, PromptVersion, Comment } from '../types';
+import { Prompt, PromptVersion, Comment } from '../types';
 import { EditorHeader } from './EditorHeader';
 import { TagManager } from './TagManager';
 import { VersionList } from './VersionList';
@@ -123,8 +123,7 @@ export const PromptEditor: React.FC<PromptEditorProps> = ({
       />
 
       <EditorOptionsBar
-        status={state.localPrompt.status || 'draft'}
-        onStatusChange={state.handleStatusChange}
+
         showSystemInstruction={!!state.localPrompt.config?.showSystemInstruction}
         onToggleSystemInstruction={() => state.handleChange('config', {
           ...state.localPrompt.config,
@@ -212,8 +211,6 @@ export const PromptEditor: React.FC<PromptEditorProps> = ({
 };
 
 interface EditorOptionsBarProps {
-  status: PromptStatus;
-  onStatusChange: (status: PromptStatus) => void;
   showSystemInstruction: boolean;
   onToggleSystemInstruction: () => void;
   isSidePanelOpen: boolean;
@@ -221,27 +218,14 @@ interface EditorOptionsBarProps {
 }
 
 const EditorOptionsBar: React.FC<EditorOptionsBarProps> = ({
-  status,
-  onStatusChange,
-  showSystemInstruction,
-  onToggleSystemInstruction,
-  isSidePanelOpen,
-  onToggleSidePanel
+  showSystemInstruction: showSystemInstruction,
+  onToggleSystemInstruction: onToggleSystemInstruction,
+  isSidePanelOpen: isSidePanelOpen,
+  onToggleSidePanel: onToggleSidePanel
 }) => (
   <div className="px-6 py-2 border-b border-border-default bg-canvas-subtle flex items-center gap-4 justify-between">
     <div className="flex items-center gap-4">
-      <div className="h-4 w-px bg-border-default" />
-
-      <select
-        value={status}
-        onChange={(e) => onStatusChange(e.target.value as PromptStatus)}
-        className="text-xs font-bold uppercase bg-canvas-base border border-border-default rounded px-2 py-1 outline-none focus:border-accent-1"
-      >
-        <option value="draft">Draft</option>
-        <option value="review">Review</option>
-        <option value="approved">Approved</option>
-        <option value="archived">Archived</option>
-      </select>
+      {/* Status Dropdown Removed */}
     </div>
 
     <div className="flex items-center gap-2">
